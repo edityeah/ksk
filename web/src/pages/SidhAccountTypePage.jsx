@@ -4,6 +4,8 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { ChevronLeft, Info } from 'lucide-react'
+import NsdcLogo from '../components/NsdcLogo.jsx'
+import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
 
 export default function SidhAccountTypePage() {
   const { navigate, goBack } = useApp()
@@ -29,12 +31,12 @@ export default function SidhAccountTypePage() {
           <button onClick={goBack} className="p-1.5 rounded hover:bg-white/10" aria-label="Back">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="w-9 h-9 rounded bg-white text-[#0A2540] flex items-center justify-center font-bold text-sm">SI</div>
+          <div className="bg-white rounded-lg p-1.5 flex items-center"><NsdcLogo size={28} showText={false} /></div>
           <div className="flex-1">
-            <div className="text-[10px] uppercase tracking-wider opacity-80">Ministry of Skill Development &amp; Entrepreneurship</div>
+            <div className="text-[10px] uppercase tracking-wider opacity-80">Ministry of Skill Development &amp; Entrepreneurship · NSDC</div>
             <div className="text-[14px] font-semibold">Skill India Digital Hub · SIDH</div>
           </div>
-          <div className="text-[11px] opacity-80 hidden md:block">sidh.nsdc.in</div>
+          <div className="hidden md:block bg-white rounded-lg px-2 py-1"><SwiftChatLogo size={24} showText={false} /></div>
         </div>
       </div>
 

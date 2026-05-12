@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api } from '../api/client.js'
 import { Lock, ShieldCheck, ExternalLink, ChevronLeft } from 'lucide-react'
+import NsdcLogo from '../components/NsdcLogo.jsx'
+import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
 
 export default function SidhRedirectPage() {
   const { navigate, goBack, showToast } = useApp()
@@ -50,11 +52,12 @@ export default function SidhRedirectPage() {
           <button onClick={goBack} className="p-1.5 rounded hover:bg-white/10 md:hidden">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div className="w-10 h-10 rounded bg-white text-[#0A2540] flex items-center justify-center font-bold">SI</div>
+          <div className="bg-white rounded-lg p-1.5 flex items-center"><NsdcLogo size={28} showText={false} /></div>
           <div className="flex-1">
-            <div className="text-xs uppercase tracking-wider opacity-80">Ministry of Skill Development &amp; Entrepreneurship</div>
+            <div className="text-xs uppercase tracking-wider opacity-80">Ministry of Skill Development &amp; Entrepreneurship · NSDC</div>
             <div className="font-semibold">Skill India Digital Hub · SIDH</div>
           </div>
+          <div className="hidden md:block bg-white rounded-lg px-2 py-1"><SwiftChatLogo size={22} showText={false} /></div>
         </div>
       </div>
 

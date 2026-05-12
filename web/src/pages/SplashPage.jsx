@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import Logo from '../components/Logo.jsx'
+import PoweredBy from '../components/PoweredBy.jsx'
 
 const LANGS = [
   { code: 'en', native: 'English',   english: 'English'   },
@@ -66,12 +67,13 @@ export default function SplashPage() {
         </div>
 
         {/* Continue button */}
-        <div className="w-full max-w-[380px]">
+        <div className="w-full max-w-[380px] flex flex-col items-center gap-5">
           <button
             onClick={handleContinue}
             className="w-full bg-primary text-white font-bold text-[15px] py-3.5 rounded-pill shadow-modal active:opacity-80 transition-opacity">
             Continue
           </button>
+          <PoweredBy size={22} layout="stack" />
         </div>
       </div>
     </div>

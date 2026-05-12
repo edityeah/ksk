@@ -5,6 +5,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import Logo from '../components/Logo.jsx'
+import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
+import NsdcLogo from '../components/NsdcLogo.jsx'
+import PoweredBy from '../components/PoweredBy.jsx'
 
 const SLIDES = [
   { id: 0, headline: 'Trusted by',  bold: '1.64 crore trainees across India', visual: 'students' },
@@ -121,7 +124,10 @@ function MobileHero({ slide, total }) {
 function DesktopPanel({ slide, total }) {
   return (
     <div className="hidden md:flex flex-col h-full overflow-hidden" style={{ background: '#F4F6FA', flex: '1 1 0' }}>
-      <div className="p-8"><div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-card"><Logo size={22} /></div></div>
+      <div className="p-8 flex items-center justify-between gap-4">
+        <SwiftChatLogo size={32} />
+        <NsdcLogo size={26} />
+      </div>
       <div className="flex-1 relative"><SlideVisual type={slide.visual} /></div>
       <div className="p-8 pb-10">
         <p className="text-[13px] font-medium text-txt-secondary">{slide.headline}</p>
@@ -181,6 +187,9 @@ function LoginPanel({ navigate }) {
           <span className="text-primary cursor-pointer">Terms of Service</span> and{' '}
           <span className="text-primary cursor-pointer">DPDP-A Policy</span>
         </p>
+        <div className="mt-6 pt-4 border-t border-bdr-light flex items-center justify-center">
+          <PoweredBy size={20} />
+        </div>
       </div>
 
       {/* Mobile */}
@@ -190,6 +199,9 @@ function LoginPanel({ navigate }) {
           By continuing, I agree to KSK's{' '}
           <span className="text-primary cursor-pointer">Terms</span> and{' '}
           <span className="text-primary cursor-pointer">DPDP-A Policy</span>
+        </div>
+        <div className="pt-2 flex items-center justify-center">
+          <PoweredBy size={18} />
         </div>
       </div>
     </div>

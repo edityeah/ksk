@@ -10,6 +10,8 @@ import { api } from '../api/client.js'
 import { defaultBotsFor, suggestionsFor, homeLayoutFor, ROLE_LABELS, ROLE_SCOPES } from '../roles/roleConfig.js'
 import { dispatchActionForRole } from '../nlp/dispatch.js'
 import Logo from '../components/Logo.jsx'
+import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
+import NsdcLogo from '../components/NsdcLogo.jsx'
 import ChatBubble from '../components/ChatBubble.jsx'
 import ChatInput from '../components/ChatInput.jsx'
 import QuickReplies from '../components/QuickReplies.jsx'
@@ -37,7 +39,15 @@ function Header({ onMenuClick }) {
             <Search className="w-5 h-5 text-txt-secondary" />
           </button>
         )}
-        <Logo size={28} showText />
+        <div className="flex items-center gap-3">
+          <SwiftChatLogo size={26} />
+          <div className="w-px h-7 bg-bdr hidden md:block" />
+          <NsdcLogo size={22} showText={false} />
+          <div className="hidden md:flex flex-col leading-tight">
+            <span className="text-[11px] font-bold text-txt-primary tracking-wider">KSK</span>
+            <span className="text-[10px] text-txt-secondary">Kaushal Samiksha Kendra</span>
+          </div>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <button onClick={() => openCanvas({ type: 'notifications' })}

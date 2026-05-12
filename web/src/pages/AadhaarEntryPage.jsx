@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api } from '../api/client.js'
 import Logo from '../components/Logo.jsx'
+import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
+import NsdcLogo from '../components/NsdcLogo.jsx'
 import { Fingerprint } from 'lucide-react'
 
 export default function AadhaarEntryPage() {
@@ -80,14 +82,14 @@ export default function AadhaarEntryPage() {
       <div className="md:hidden flex-1 flex flex-col overflow-y-auto">
         <div className="px-4 pt-4 pb-2 flex items-center justify-between">
           <button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary px-2 py-1 rounded-lg hover:bg-slate-100">‹ Back</button>
-          <Logo size={26} showText />
+          <div className='flex items-center gap-3'><SwiftChatLogo size={26} /><div className='w-px h-6 bg-bdr' /><NsdcLogo size={22} showText={false} /></div>
         </div>
         <FormBody />
       </div>
       <div className="hidden md:flex flex-col justify-center" style={{ width: 'clamp(340px, 38%, 460px)', flexShrink: 0, padding: '0 16px' }}>
         <div className="mb-8 px-6 flex items-center justify-between">
           <button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary px-2 py-1 rounded-lg hover:bg-slate-100">‹ Back</button>
-          <Logo size={30} showText />
+          <div className='flex items-center gap-3'><SwiftChatLogo size={28} /><div className='w-px h-6 bg-bdr' /><NsdcLogo size={24} showText={false} /></div>
         </div>
         <FormBody />
       </div>
