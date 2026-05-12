@@ -1,26 +1,48 @@
 // SIDH Partner Type selector — mirrors the real SIDH portal's "Login as partner"
-// grid. 10 partner types, each routes to the SIDH redirect page with that partner
-// type as context.
+// grid. 19 partner types, each mapped to a KSK internal role.
 
 import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import Logo from '../components/Logo.jsx'
 import {
-  Share2, GraduationCap, Handshake, School, Award,
-  ClipboardCheck, Building2, Users, Network, UserSquare2, ChevronLeft, Info,
+  Share2, GraduationCap, Handshake, School, Award, ClipboardCheck, Building2,
+  Users, Network, UserSquare2, BookOpen, Map, Settings, Briefcase, Layers,
+  User, ClipboardList, Trophy, Landmark, ChevronLeft, Info,
 } from 'lucide-react'
 
 const PARTNERS = [
-  { id: 'mobilizer',         label: 'Mobilizer',          icon: Share2,         desc: 'Encourage candidate registrations using a personalised QR…',                       maps: 'training_partner' },
-  { id: 'trainer',           label: 'Trainer',            icon: GraduationCap,  desc: 'Empower individuals with essential skills & knowledge to be…',                  maps: 'trainer' },
+  // Field operations
+  { id: 'mobilizer',         label: 'Mobilizer',          icon: Share2,         desc: 'Encourage candidate registrations using a personalised QR code.',                 maps: 'training_partner' },
+  { id: 'trainer',           label: 'Trainer',            icon: GraduationCap,  desc: 'Empower individuals with essential skills & knowledge to be employable.',        maps: 'trainer' },
+  { id: 'mentor',            label: 'Mentor',             icon: User,           desc: 'Guide and coach trainees through the skilling journey.',                         maps: 'trainer' },
+
+  // Training providers
   { id: 'training_partner',  label: 'Training Partner',   icon: Handshake,      desc: 'Build a skilled workforce through industry-relevant training.',                  maps: 'training_partner' },
-  { id: 'training_centre',   label: 'Training Centre',    icon: School,         desc: 'Provide specialized facilities for comprehensive skill development.',            maps: 'training_centre' },
-  { id: 'awarding_body',     label: 'Awarding Body',      icon: Award,          desc: 'Accredit and certify individuals or institutions based on specific… standards', maps: 'ssc' },
+  { id: 'training_centre',   label: 'Training Centre',    icon: School,         desc: 'Provide specialised facilities for comprehensive skill development.',            maps: 'training_centre' },
+  { id: 'btp',               label: 'Basic Training Providers — BTP', icon: BookOpen, desc: 'Deliver Basic Training under the Apprenticeship (NAPS) framework.',       maps: 'training_partner' },
+  { id: 'institutional',     label: 'Institutional Partner', icon: Landmark,    desc: 'Universities, ITIs, and institutional bodies running skilling programmes.',     maps: 'training_partner' },
+
+  // Accreditation / standards
+  { id: 'awarding_body',     label: 'Awarding Body',      icon: Award,          desc: 'Accredit and certify individuals or institutions based on QP standards.',        maps: 'ssc' },
+  { id: 'tpa',               label: 'TPA',                icon: Network,        desc: 'Third Party Aggregators consolidating capacity across partners.',                maps: 'ssc' },
+  { id: 'apprenticeship_ssc',label: 'Apprenticeship SSC/AB', icon: Briefcase,   desc: 'Apprenticeship Sector Skills Council / Awarding Body for NAPS.',                 maps: 'ssc' },
+
+  // Assessment
   { id: 'assessor',          label: 'Assessor',           icon: UserSquare2,    desc: 'Assess and evaluate the performance & competency of learners.',                  maps: 'assessor' },
   { id: 'assessment_agency', label: 'Assessment Agency',  icon: ClipboardCheck, desc: 'Conduct assessments to ensure standardised evaluation of skills.',               maps: 'assessor' },
-  { id: 'establishment',     label: 'Establishment',      icon: Building2,      desc: 'Assess and evaluate the performance & competency of learners.',                  maps: 'employer' },
-  { id: 'tpa',               label: 'TPA',                icon: Network,        desc: 'Accredit and certify individuals or institutions based on specific… standards', maps: 'ssc' },
-  { id: 'institutional',     label: 'Institutional Partner', icon: Users,       desc: 'Accredit and certify individuals or institutions based on specific…',           maps: 'training_partner' },
+
+  // Industry
+  { id: 'establishment',     label: 'Establishment',      icon: Building2,      desc: 'Industry establishments hosting apprentices / verifying placements.',            maps: 'employer' },
+
+  // NSDC / Govt admin
+  { id: 'nsdc_admin',        label: 'NSDC Admin',         icon: Settings,       desc: 'NSDC administrative role across schemes, accreditations and outcomes.',          maps: 'nsdc_officer' },
+  { id: 'rdsde',             label: 'RDSDE',              icon: Map,            desc: 'Regional Directorate Skill Development & Entrepreneurship — regional admin.',   maps: 'nsdc_officer' },
+  { id: 'scheme_admin',      label: 'Scheme Admin',       icon: Layers,         desc: 'Per-scheme administrator: PMKVY, DDU-GKY, NAPS, SIB, PM Vishwakarma…',          maps: 'nsdc_officer' },
+  { id: 'pmu',               label: 'Project Management Unit (PMU)', icon: ClipboardList, desc: 'Admin/PMU/Scheme administrator: assess and evaluate the requests.',     maps: 'nsdc_officer' },
+  { id: 'india_skills',      label: 'India Skills Admin', icon: Trophy,         desc: 'Accredit and certify eligible participants of the India Skills 2025-26 competition.', maps: 'nsdc_officer' },
+
+  // 19th — placeholder for the partner type the screenshots cut off
+  { id: 'sector_skills',     label: 'Sector Skills Council', icon: Users,       desc: 'Sector body owning Qualification Packs and standards for a sector.',             maps: 'ssc' },
 ]
 
 export default function SidhPartnerSelectPage() {
@@ -36,11 +58,11 @@ export default function SidhPartnerSelectPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      {/* Fake browser-tab + SIDH chrome header */}
+      {/* SIDH chrome header */}
       <div className="bg-[#0A2540] text-white">
         <div style={{ background: 'linear-gradient(to right, #FF9933 33%, #FFFFFF 33% 66%, #138808 66%)', height: 4 }} />
         <div className="px-6 py-3 flex items-center gap-3">
-          <button onClick={goBack} className="p-1.5 rounded hover:bg-white/10">
+          <button onClick={goBack} className="p-1.5 rounded hover:bg-white/10" aria-label="Back">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="w-9 h-9 rounded bg-white text-[#0A2540] flex items-center justify-center font-bold text-sm">SI</div>
@@ -60,7 +82,7 @@ export default function SidhPartnerSelectPage() {
         </h1>
         <p className="text-[14px] text-txt-secondary mt-1.5 max-w-2xl">
           KSK federates with SIDH for partner SSO. Choose how your organisation is registered with the
-          National Skill Development Corporation.
+          National Skill Development Corporation. {PARTNERS.length} partner types supported.
         </p>
       </div>
 
@@ -72,16 +94,16 @@ export default function SidhPartnerSelectPage() {
             return (
               <button key={p.id} onClick={() => pick(p)} onMouseEnter={() => setHover(p.id)} onMouseLeave={() => setHover(null)}
                 className="relative text-left rounded-2xl border-2 p-4 transition-all active:scale-[0.98] hover:shadow-card"
-                style={{ borderColor: hover === p.id ? '#386AF6' : '#E8EDF5', background: '#fff', minHeight: 200 }}>
+                style={{ borderColor: hover === p.id ? '#386AF6' : '#E8EDF5', background: '#fff', minHeight: 210 }}>
                 <span className="absolute top-3 right-3 text-txt-tertiary hover:text-primary"><Info className="w-4 h-4" /></span>
                 <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3"
                   style={{ background: hover === p.id ? '#EEF3FF' : '#F4F6FA' }}>
                   <Icon className="w-5 h-5 text-primary" />
                 </div>
-                <div className="text-[15px] font-bold text-txt-primary">{p.label}</div>
+                <div className="text-[14px] font-bold text-txt-primary leading-tight">{p.label}</div>
                 <p className="text-[12px] text-txt-secondary leading-snug mt-1.5 line-clamp-4">{p.desc}</p>
                 <div className="mt-4 inline-flex items-center gap-1 text-[13px] font-bold" style={{ color: '#F26B22' }}>
-                  Register <span>→</span>
+                  Login <span>→</span>
                 </div>
               </button>
             )
@@ -89,8 +111,8 @@ export default function SidhPartnerSelectPage() {
         </div>
 
         <div className="mt-8 rounded-2xl border border-bdr-light bg-[#F4F6FA] px-4 py-3 text-[12px] text-txt-secondary">
-          <b className="text-txt-primary">Don't see your role?</b> Trainees, employers, NSDC officers, funders, and stipend
-          payment officers should use phone OTP instead. <button onClick={() => navigate('login')} className="text-primary font-bold ml-1">← Back to login</button>
+          <b className="text-txt-primary">Don't see your role?</b> Trainees, funders, and stipend payment officers
+          should use phone OTP instead. <button onClick={() => navigate('login')} className="text-primary font-bold ml-1">← Back to login</button>
         </div>
       </div>
 
