@@ -59,12 +59,8 @@ function SlideVisual({ type }) {
   if (type === 'trophy') {
     return (
       <div className="relative flex items-center justify-center w-full h-full">
-        <div className="absolute top-4 right-8 text-[13px] font-semibold text-txt-secondary text-right leading-snug">
-          Endorsed by<br />
-          <span className="text-txt-primary font-bold">NSDC · MSDE<br />Skill India</span>
-        </div>
         <div className="flex flex-col items-center">
-          <div className="text-[90px] leading-none select-none">🏆</div>
+          <div className="text-[110px] leading-none select-none">🏆</div>
           <div className="mt-2 flex items-center gap-1.5 bg-white rounded-full px-3 py-1 shadow-card">
             <span className="text-[14px]">🇮🇳</span>
             <span className="text-[11px] font-bold text-txt-secondary">Skill India</span>
@@ -137,29 +133,28 @@ function DesktopPanel({ slide, total }) {
         <NsdcLogo size={30} />
       </div>
 
-      {/* Hero — large illustration + mascot */}
-      <div className="flex-1 relative flex flex-col items-center justify-center px-10 z-10">
-        <div className="w-full flex-1 flex items-center justify-center" style={{ minHeight: 320 }}>
-          <div className="w-[min(560px,90%)] aspect-square relative" style={{ transform: 'scale(1.6)' }}>
-            <SlideVisual type={slide.visual} />
-          </div>
-        </div>
-        {/* Mascot — bottom-left, large and welcoming */}
-        <div className="absolute bottom-6 left-8 z-20">
-          <Mascot size={210} />
+      {/* Illustration */}
+      <div className="flex-1 flex items-center justify-center px-10 z-10 overflow-hidden">
+        <div className="w-[min(320px,60%)] aspect-square relative">
+          <SlideVisual type={slide.visual} />
         </div>
       </div>
 
-      {/* Caption + dots */}
-      <div className="p-8 pb-10 relative z-10 max-w-[420px] ml-auto">
-        <p className="text-[14px] font-semibold text-txt-secondary">{slide.headline}</p>
-        <p className="text-[18px] font-bold text-txt-primary mt-1.5 leading-snug">{slide.bold}</p>
-        <div className="flex gap-2 mt-5">
+      {/* Caption + dots — centred above the mascot */}
+      <div className="px-10 z-10 text-center">
+        <p className="text-[13px] font-semibold text-txt-secondary uppercase tracking-wider">{slide.headline}</p>
+        <p className="text-[18px] font-bold text-txt-primary mt-1.5 leading-snug max-w-[440px] mx-auto">{slide.bold}</p>
+        <div className="flex gap-2 mt-4 justify-center">
           {Array.from({ length: total }).map((_, i) => (
             <div key={i} className="transition-all duration-300 rounded-full"
               style={{ width: i === slide.id ? 24 : 8, height: 8, background: i === slide.id ? '#386AF6' : '#C5CBDC' }} />
           ))}
         </div>
+      </div>
+
+      {/* Mascot — anchored at the bottom-centre of the left panel */}
+      <div className="flex justify-center pb-2 pt-4 z-10 relative">
+        <Mascot size={220} />
       </div>
     </div>
   )
