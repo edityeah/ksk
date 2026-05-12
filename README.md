@@ -11,9 +11,62 @@ National skilling Monitoring & Evaluation command centre on SwiftChat. Forked fr
 ```
 ksk/
 ├── web/         # Vite + React 18 + Tailwind frontend (SwiftChat fork)
-├── server/      # Node + Express + Prisma + SQLite backend + OpenAI integration
-└── docs/        # design docs, specs, knowledge base seeds for RAG
+├── server/      # Node + Express + Prisma + Postgres backend + OpenAI integration
+├── api/         # Vercel serverless entry — wraps the Express app
+├── docs/        # design docs, specs, knowledge base seeds for RAG
+└── vercel.json  # Vercel deploy config
 ```
+
+## Deploy to Vercel
+
+The entire app — frontend SPA + serverless API — runs on a single Vercel project.
+
+### 1. Provision a Postgres database
+
+The cheapest path is **[Neon](https://neon.tech)** (free tier, instant, includes pgvector):
+
+```text
+1. Sign up at neon.tech → New Project → name "ksk"
+2. Copy the connection string (Pooled connection recommended for serverless)
+```
+
+You'll get a URL like:
+`postgresql://USER:PASSWORD@ep-xyz-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require`
+
+### 2. Connect the GitHub repo to Vercel
+
+```text
+1. vercel.com → Add New Project → import edityeah/ksk
+2. Framework Preset: Other (Vercel auto-detects vercel.json)
+3. Root Directory: .  (project root)
+```
+
+### 3. Environment variables (Vercel dashboard → Settings → Environment Variables)
+
+| Key | Value |
+|---|---|
+| `DATABASE_URL` | the Neon Pooled connection string |
+| `JWT_SECRET` | any long random string (e.g. `openssl rand -hex 32`) |
+| `OPENAI_API_KEY` | your real OpenAI key (must be valid) |
+| `OPENAI_CHAT_MODEL` | `gpt-4o` |
+| `OPENAI_EMBED_MODEL` | `text-embedding-3-small` |
+| `RATE_LIMIT_PER_HOUR` | `50` |
+
+### 4. Deploy + run the migrations once
+
+After the first deploy succeeds, open a one-off shell (`vercel env pull` locally, then):
+
+```bash
+cd server
+npm install
+npx prisma db push           # creates all tables in Neon
+npm run db:seed              # seeds 10 demo users + scenario data
+npm run rag:ingest           # optional: embed the markdown knowledge base
+```
+
+(Or just run `prisma db push` + seed against the same DATABASE_URL from your laptop — Neon accepts external connections.)
+
+Subsequent commits to `main` will auto-deploy.
 
 ## Quick start
 

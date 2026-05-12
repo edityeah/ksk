@@ -65,7 +65,13 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || 'internal_error', code: err.code })
 })
 
-const port = Number(process.env.PORT || 8787)
-app.listen(port, () => {
-  console.log(`[ksk] server on http://localhost:${port}`)
-})
+// Export the Express app so a serverless handler (Vercel) can mount it directly.
+// Only call listen() when running standalone (npm run dev) — never inside Vercel.
+export default app
+
+if (!process.env.VERCEL) {
+  const port = Number(process.env.PORT || 8787)
+  app.listen(port, () => {
+    console.log(`[ksk] server on http://localhost:${port}`)
+  })
+}
