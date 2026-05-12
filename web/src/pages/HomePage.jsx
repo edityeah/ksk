@@ -212,7 +212,8 @@ function GreetingPanel({ ctx, bots, chips, onSend, onPickBot }) {
             answers policy questions and routes you to the right action.
           </p>
           <div className="mt-6">
-            <button className="inline-flex items-center gap-2.5 px-6 py-3 rounded-pill bg-primary text-white font-bold text-[15px] shadow-modal hover:opacity-90">
+            <button onClick={() => ctx.openCanvas({ type: 'swifty_assistant' })}
+              className="inline-flex items-center gap-2.5 px-6 py-3 rounded-pill bg-primary text-white font-bold text-[15px] shadow-modal hover:opacity-90 active:scale-95 transition">
               <Phone className="w-4 h-4" /> Talk to Swifty Assistant
             </button>
           </div>

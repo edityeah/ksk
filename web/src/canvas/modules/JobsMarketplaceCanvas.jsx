@@ -1,125 +1,136 @@
-// Jobs — AI-powered, queries OpenAI web search across NCS, NAPS, SIDH and
-// reputable job portals. Curated quick-queries by sector + location.
+// Jobs — curated jobs from /api/jobs (seeded) plus an "Ask AI" panel that
+// searches live across NCS, NAPS, SIDH and employer portals.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../../api/client.js'
 import { useApp } from '../../context/AppContext.jsx'
-import { Search, Sparkles, ExternalLink, Loader2, MapPin } from 'lucide-react'
+import { Search, Sparkles, Loader2, ExternalLink, Wand2, IndianRupee, MapPin, Building2 } from 'lucide-react'
 
-const QUICK_QUERIES = [
-  { label: '🏪 Retail jobs',      query: 'Verified entry-level retail jobs in India 2026 — Reliance Retail, DMart, Vishal Mega Mart, Lifestyle. Monthly salary, locations, application links.' },
-  { label: '📦 Delivery / logistics', query: 'Last-mile delivery and warehouse jobs in India 2026 — Flipkart, Amazon, Delhivery, BlinkIt, Swiggy. Salary and onboarding.' },
-  { label: '🩺 Healthcare jobs',  query: 'Entry-level healthcare jobs in India 2026 — General Duty Assistant, ward boy, phlebotomist, home health aide. Hospitals hiring.' },
-  { label: '⚡ Electrician',      query: 'Electrician jobs in India 2026 — assistant electrician, wiring technician. L&T, Tata Projects, Schneider, local contractors.' },
-  { label: '👩 BPO / call centre', query: 'Customer care executive jobs (voice + non-voice) in India 2026 — Concentrix, Genpact, Teleperformance, Tech Mahindra. Salary, shift, freshers.' },
-  { label: '🤝 NAPS apprenticeships', query: 'Best NAPS apprenticeship openings on India\'s Apprenticeship Portal in 2026 — by sector and stipend. How to apply via NSDC.' },
-  { label: '🏗️ Construction',     query: 'Construction sector jobs in India 2026 — mason, bar bender, formwork carpenter, plumber. L&T, Shapoorji Pallonji, GMR.' },
-  { label: '✂️ Tailoring / apparel', query: 'Sewing machine operator and tailor jobs in India 2026 — Shahi Exports, Arvind, Welspun. Salary, hiring drives, women-friendly.' },
-]
-
-const SYSTEM = `You are KSK's jobs assistant. The user is looking for verified entry-level / blue-collar / grey-collar jobs in India.
-Use web search to find current openings from:
+const AI_SYSTEM = `You are KSK's jobs assistant. Use web search to find current entry-level / blue-collar / grey-collar job openings in India from:
 - National Career Service (ncs.gov.in)
 - NSDC's apprenticeship portal
-- Skill India Digital Hub (skillindiadigital.gov.in)
-- Reputable employer career sites (Reliance Retail, DMart, Flipkart, Amazon, L&T, etc.)
-- Job boards: Naukri, Indeed, Apna, Vahan, Workindia
+- Skill India Digital Hub
+- Reputable employer career sites (Reliance, DMart, L&T, Tata, Flipkart, etc.)
+- Verified job boards (Apna, Naukri, Vahan, Workindia)
 
-Return a concise markdown list of 5-8 specific job openings. For each include:
-- **Job title** at **Employer**
-- Location(s)
-- Monthly salary range (₹k/mo)
-- Eligibility (Class 10/12 / ITI / etc.)
-- Apply link or "Apply on NCS"
-
-Prioritise NCS-verified and NSDC-aligned openings. Be honest about freshness — note the date if you can find it.`
+Return 5-8 specific openings with: job title, employer (bold), location, monthly salary range (₹k/mo), eligibility, and apply link. Prefer NCS-verified and NSDC-aligned openings.`
 
 export default function JobsMarketplaceCanvas() {
   const { showToast, meExtra } = useApp()
   const traineeLoc = meExtra?.trainee?.district || ''
-  const [q, setQ] = useState(traineeLoc ? `Retail jobs near ${traineeLoc}` : '')
-  const [busy, setBusy] = useState(false)
-  const [answer, setAnswer] = useState('')
-  const [citations, setCitations] = useState([])
 
-  async function run(query) {
+  const [jobs, setJobs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [aiQuery, setAiQuery] = useState(traineeLoc ? `Retail jobs near ${traineeLoc}` : '')
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiAnswer, setAiAnswer] = useState('')
+  const [aiCitations, setAiCitations] = useState([])
+  const [showAi, setShowAi] = useState(false)
+
+  useEffect(() => {
+    api.get('/api/jobs').then(r => setJobs(r.jobs || [])).finally(() => setLoading(false))
+  }, [])
+
+  async function askAi(query) {
     if (!query) return
-    setBusy(true); setAnswer(''); setCitations([])
+    setAiBusy(true); setAiAnswer(''); setAiCitations([])
     try {
-      const r = await api.post('/api/ai/search', { query, instructions: SYSTEM })
-      setAnswer(r.text || '(no answer)')
-      setCitations(r.citations || [])
+      const r = await api.post('/api/ai/search', { query, instructions: AI_SYSTEM })
+      setAiAnswer(r.text || '(no answer)'); setAiCitations(r.citations || [])
     } catch (e) {
-      showToast({ kind: 'danger', text: e.payload?.error === 'openai_not_configured' ? 'OpenAI key not set on the server.' : 'Job search failed.' })
-    } finally { setBusy(false) }
+      showToast({ kind: 'danger', text: e.payload?.error === 'openai_not_configured' ? 'OpenAI key not set.' : 'AI search failed.' })
+    } finally { setAiBusy(false) }
   }
 
   return (
     <div className="p-5" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      <div className="mb-4">
-        <div className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[2px] text-primary mb-1">
-          <Sparkles className="w-3.5 h-3.5" /> Find Jobs · AI + Web Search
-        </div>
-        <h2 className="text-[22px] font-bold text-txt-primary leading-tight">Open jobs across India</h2>
-        <p className="text-[13px] text-txt-secondary mt-1">
-          Live results from NCS, NAPS, SIDH and verified employer career sites.
+      <div className="mb-3">
+        <div className="text-[12px] font-bold uppercase tracking-[2px] text-primary mb-1">Find Jobs</div>
+        <h2 className="text-[22px] font-bold text-txt-primary leading-tight">Open jobs in your sector</h2>
+        <p className="text-[12px] text-txt-secondary mt-0.5">
+          {jobs.length} verified openings from KSK partner employers.
           {traineeLoc && <> Showing jobs near <b>{traineeLoc}</b>.</>}
         </p>
       </div>
 
-      <form onSubmit={e => { e.preventDefault(); run(q) }} className="flex items-center gap-2 px-3 py-2.5 rounded-pill bg-surface-page border border-bdr-light mb-3">
-        <Search className="w-4 h-4 text-txt-tertiary flex-shrink-0" />
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="e.g. 'plumber jobs in Patna' or 'BPO night shift Bangalore'"
-          className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-txt-tertiary" />
-        <button type="submit" disabled={!q.trim() || busy}
-          className="px-3 py-1 rounded-pill bg-primary text-white text-[12px] font-bold disabled:bg-slate-300">
-          {busy ? '…' : 'Search'}
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary">Partner openings</div>
+        <button onClick={() => setShowAi(s => !s)} className="inline-flex items-center gap-1 text-primary font-bold text-[12px]">
+          <Wand2 className="w-3.5 h-3.5" /> {showAi ? 'Hide AI search' : 'Search the web with AI'}
         </button>
-      </form>
-
-      <div className="flex flex-wrap gap-2 mb-4">
-        {QUICK_QUERIES.map(qq => (
-          <button key={qq.label} onClick={() => { setQ(qq.query); run(qq.query) }}
-            disabled={busy}
-            className="text-[12px] font-bold px-3 py-1.5 rounded-pill border border-bdr-light bg-white text-txt-primary hover:border-primary disabled:opacity-50">
-            {qq.label}
-          </button>
-        ))}
       </div>
 
-      {busy && (
-        <div className="rounded-2xl border border-bdr-light bg-white p-6 text-center text-txt-secondary text-[13px]">
-          <Loader2 className="w-6 h-6 mx-auto mb-2 text-primary animate-spin" />
-          Searching NCS, NAPS and employer portals for live openings…
+      {/* AI panel */}
+      {showAi && (
+        <div className="mb-4 rounded-2xl border border-primary-light bg-primary-light/30 p-3">
+          <form onSubmit={e => { e.preventDefault(); askAi(aiQuery) }} className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+            <input value={aiQuery} onChange={e => setAiQuery(e.target.value)}
+              placeholder="e.g. 'plumber jobs Patna' or 'BPO night shift Bangalore'"
+              className="flex-1 bg-white border border-bdr-light rounded-pill px-3 py-1.5 text-[13px] outline-none" />
+            <button type="submit" disabled={!aiQuery.trim() || aiBusy}
+              className="px-3 py-1.5 rounded-pill bg-primary text-white text-[12px] font-bold disabled:bg-slate-300">
+              {aiBusy ? '…' : 'Search live'}
+            </button>
+          </form>
+          {aiBusy && (
+            <div className="mt-3 text-center text-txt-secondary text-[13px] inline-flex items-center justify-center gap-2 w-full">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" /> Searching NCS, NAPS and employer portals…
+            </div>
+          )}
+          {!aiBusy && aiAnswer && (
+            <div className="mt-3 rounded-2xl bg-white border border-bdr-light p-3">
+              <div className="text-[13px] text-txt-primary whitespace-pre-wrap leading-relaxed">{renderMd(aiAnswer)}</div>
+              {aiCitations.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-bdr-light flex flex-wrap gap-x-3">
+                  {aiCitations.map((c, i) => (
+                    <a key={i} href={c.url} target="_blank" rel="noreferrer" className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[260px]">
+                      {c.title} <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
-      {!busy && answer && <ResultCard text={answer} citations={citations} />}
+
+      {/* Curated jobs */}
+      <div className="space-y-2.5">
+        {loading && <div className="text-sm text-txt-secondary">Loading jobs…</div>}
+        {!loading && jobs.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-bdr-light bg-surface-page p-6 text-center text-txt-secondary text-sm">No partner jobs open right now — try AI search above.</div>
+        )}
+        {jobs.map(j => <JobCard key={j.id} job={j} />)}
+      </div>
 
       <div className="mt-5 pt-4 border-t border-bdr-light text-[10px] text-txt-tertiary leading-relaxed">
-        Results are live web data. Use your Skill Passport when applying — it auto-fills verified credentials.
+        Verified KSK partner employers + AI-powered live web search across NCS, NAPS, SIDH and employer portals. Use your Skill Passport to apply in one tap.
       </div>
     </div>
   )
 }
 
-function ResultCard({ text, citations }) {
+function JobCard({ job }) {
   return (
-    <div className="rounded-2xl border border-bdr-light bg-white p-5">
-      <div className="text-[14px] text-txt-primary leading-relaxed whitespace-pre-wrap">{renderMd(text)}</div>
-      {citations?.length > 0 && (
-        <div className="mt-4 pt-3 border-t border-bdr-light">
-          <div className="text-[10px] uppercase tracking-wider font-bold text-txt-tertiary mb-1.5">Sources</div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {citations.map((c, i) => (
-              <a key={i} href={c.url} target="_blank" rel="noreferrer"
-                className="text-[12px] text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[280px]">
-                {c.title} <ExternalLink className="w-3 h-3" />
-              </a>
-            ))}
-          </div>
+    <div className="rounded-2xl border border-bdr-light bg-white p-4 hover:shadow-card transition">
+      <div className="flex items-start gap-3">
+        <div className="w-11 h-11 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center flex-shrink-0">
+          <Building2 className="w-5 h-5" />
         </div>
-      )}
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-[15px] text-txt-primary leading-tight">{job.title}</div>
+          <div className="text-[12px] text-txt-secondary mt-0.5 truncate">{job.employer?.name} · {job.employer?.sector?.name || 'Verified employer'}</div>
+          <div className="grid grid-cols-3 gap-2 mt-3 text-[12px] text-txt-secondary">
+            <div className="inline-flex items-center gap-1"><MapPin className="w-3 h-3 text-txt-tertiary" />{job.location}</div>
+            <div className="inline-flex items-center gap-1"><IndianRupee className="w-3 h-3 text-txt-tertiary" />₹{job.ctcMonthly?.toLocaleString('en-IN')}/mo</div>
+            <div className="text-txt-secondary">{job.openings} opening{job.openings === 1 ? '' : 's'}</div>
+          </div>
+          <button className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 rounded-pill bg-primary text-white text-[12px] font-bold hover:opacity-90">
+            Apply with Skill Passport
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -127,32 +138,16 @@ function ResultCard({ text, citations }) {
 function renderMd(s) {
   if (!s) return null
   const out = []
-  const lines = s.split('\n')
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i]
-    if (/^#{1,3}\s+/.test(line)) {
-      const lvl = (line.match(/^#+/) || [''])[0].length
-      out.push(<div key={i} className={`font-bold ${lvl === 1 ? 'text-[18px]' : 'text-[15px]'} mt-3 mb-1 text-txt-primary`}>{inline(line.replace(/^#+\s+/, ''))}</div>)
-      continue
-    }
-    if (/^[-*]\s+/.test(line)) {
-      out.push(<div key={i} className="flex gap-2 my-0.5"><div className="text-primary mt-0.5">•</div><div className="flex-1">{inline(line.replace(/^[-*]\s+/, ''))}</div></div>)
-      continue
-    }
-    if (line.trim() === '') { out.push(<div key={i} className="h-2" />); continue }
-    out.push(<div key={i} className="my-0.5">{inline(line)}</div>)
-  }
+  s.split('\n').forEach((line, i) => {
+    if (/^[-*]\s+/.test(line)) out.push(<div key={i} className="flex gap-2"><div className="text-primary">•</div><div className="flex-1">{inline(line.replace(/^[-*]\s+/, ''))}</div></div>)
+    else if (line.trim() === '') out.push(<div key={i} className="h-2" />)
+    else out.push(<div key={i}>{inline(line)}</div>)
+  })
   return out
 }
 function inline(s) {
-  const parts = []
-  const re = /\*\*([^*]+)\*\*/g
-  let last = 0, m, k = 0
-  while ((m = re.exec(s))) {
-    if (m.index > last) parts.push(s.slice(last, m.index))
-    parts.push(<b key={k++} className="font-bold text-txt-primary">{m[1]}</b>)
-    last = m.index + m[0].length
-  }
+  const parts = []; const re = /\*\*([^*]+)\*\*/g; let last = 0, m, k = 0
+  while ((m = re.exec(s))) { if (m.index > last) parts.push(s.slice(last, m.index)); parts.push(<b key={k++}>{m[1]}</b>); last = m.index + m[0].length }
   if (last < s.length) parts.push(s.slice(last))
   return parts
 }

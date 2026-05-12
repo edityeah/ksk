@@ -1,221 +1,166 @@
-// AvatarCall — reusable component for any AI persona canvas.
+// AvatarCall — reusable AI persona conversation panel.
 //
-//   Modes: text  |  voice  |  video
-//          - text: chat-only, uses /api/ai/stream + a chat UI
-//          - voice: Anam audio-only (no <video> rendered)
-//          - video: Anam <video> + screen-share toggle
+// IMPORTANT:
+//   * Text chat is ALWAYS available — no Anam minutes consumed.
+//   * Voice/Video calls only start when the user explicitly clicks "Start Call".
+//   * An explicit "End Call" button stops the Anam session.
 //
-//   Speech path: Anam captures user audio → emits MESSAGE_HISTORY_UPDATED →
-//   we POST the full history to /api/ai/stream → pipe deltas back into
-//   talk.streamMessageChunk() so Anam lip-syncs the avatar.
+// Speech path during a live call:
+//   Anam captures the user's mic → emits MESSAGE_HISTORY_UPDATED event with
+//   the latest user transcript → we POST the full chat history to
+//   /api/ai/stream → backend streams OpenAI deltas via SSE → we pipe each
+//   delta into client.streamMessageChunk(delta) so the avatar lip-syncs.
 //
-//   Text path: same /api/ai/stream endpoint, rendered in chat bubbles.
+// Audio fix: the media <video> element is always rendered (display-only
+// toggled via CSS), so it exists in the DOM before streamToVideoElement
+// runs. We pass the element reference, not its id string.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Mic, MicOff, Phone, Video, MessageSquare, ScreenShare, ScreenShareOff, Send, Volume2, Loader2 } from 'lucide-react'
+import {
+  Mic, MicOff, Phone, PhoneOff, Video, ScreenShare, ScreenShareOff,
+  Send, Volume2, Loader2, PhoneCall,
+} from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import { api, getToken } from '../api/client.js'
 import { loadAnam } from '../utils/anamSdk.js'
 import ChatBubble from './ChatBubble.jsx'
 
-export default function AvatarCall({ persona, title, intro, useWebSearch, extraSystem }) {
-  const { showToast, user } = useApp()
-  const [mode, setMode] = useState('text')            // text | voice | video
-  const [callState, setCallState] = useState('idle')  // idle | connecting | live | ended | error
-  const [errMsg, setErrMsg] = useState(null)
-  const [muted, setMuted] = useState(false)
-  const [screenSharing, setScreenSharing] = useState(false)
+export default function AvatarCall({ persona, title, intro, useWebSearch, extraSystem, suggestions = [] }) {
+  const { showToast } = useApp()
 
   const [messages, setMessages] = useState([])
   const [thinking, setThinking] = useState(false)
   const [input, setInput] = useState('')
-
-  const videoRef = useRef(null)
-  const audioRef = useRef(null)
-  const anamRef = useRef(null) // anam client instance
-  const messagesRef = useRef([]) // mirror for handlers
-
+  const messagesRef = useRef([])
   useEffect(() => { messagesRef.current = messages }, [messages])
 
-  // ── Cleanup on unmount or mode change ─────────────────────────────────
-  useEffect(() => () => stopAnam(), [])
-  useEffect(() => {
-    // when switching mode, tear down any live avatar session
-    if (mode === 'text') stopAnam()
-  }, [mode])
+  const [callMode, setCallMode] = useState('voice')
+  const [callState, setCallState] = useState('idle')
+  const [callError, setCallError] = useState(null)
+  const [muted, setMuted] = useState(false)
+  const [screenSharing, setScreenSharing] = useState(false)
 
-  function stopAnam() {
-    try { anamRef.current?.stopStreaming?.() } catch {}
-    try { anamRef.current = null } catch {}
-    if (callState !== 'idle') setCallState('ended')
-  }
+  const mediaRef = useRef(null)
+  const anamRef = useRef(null)
 
-  // ── Mint Anam session + start streaming ───────────────────────────────
-  const startAnam = useCallback(async (kind) => {
-    setCallState('connecting'); setErrMsg(null)
+  useEffect(() => () => stopCall(true), [])
+
+  const startCall = useCallback(async () => {
+    if (callState === 'connecting' || callState === 'live') return
+    setCallState('connecting'); setCallError(null)
     try {
       const session = await api.post('/api/avatar/session', { persona })
-      if (session?.error) throw new Error(session.error)
       const sessionToken = session.sessionToken || session.session_token || session.token
       if (!sessionToken) throw new Error('No sessionToken in Anam response')
 
       const sdk = await loadAnam()
-      const create = sdk.createClient || sdk.default?.createClient || sdk.unsafe_createClientWithApiKey
-      if (typeof create !== 'function') throw new Error('Anam SDK missing createClient export')
+      const createClient = sdk.createClient || sdk.default?.createClient
+      if (typeof createClient !== 'function') throw new Error('Anam SDK is missing createClient export')
 
-      const client = create(sessionToken)
+      const client = createClient(sessionToken)
       anamRef.current = client
 
-      // Hook user-speech events → /api/ai/stream → talk.streamMessageChunk
       const evt = sdk.AnamEvent || {}
+      const eventName = evt.MESSAGE_HISTORY_UPDATED || 'MESSAGE_HISTORY_UPDATED'
       const onHistory = async (history) => {
-        // The last message is typically the user. Anam's exact event shape varies
-        // across SDK versions, so we handle both.
-        const newUserMsg = Array.isArray(history)
-          ? [...history].reverse().find(m => m.role === 'user')
-          : null
-        if (!newUserMsg?.content) return
-        await streamReply(newUserMsg.content, client)
+        const last = Array.isArray(history) ? [...history].reverse().find(m => m.role === 'user') : null
+        if (last?.content) await streamReply(last.content, client)
       }
-      try {
-        client.addListener?.(evt.MESSAGE_HISTORY_UPDATED || 'MESSAGE_HISTORY_UPDATED', onHistory)
-      } catch (e) { console.warn('[anam] listener attach failed', e) }
+      try { client.addListener?.(eventName, onHistory) } catch (e) { console.warn('[anam] listener attach failed', e) }
 
-      // Mount the stream to <video> (video mode) or <audio> (voice mode)
-      if (kind === 'video') {
-        await client.streamToVideoElement(videoRef.current?.id || 'anam-video')
-      } else {
-        // voice-only: Anam still streams audio + (hidden) video.
-        if (audioRef.current) await client.streamToVideoElement?.(audioRef.current.id || 'anam-audio')
-        else await client.streamToVideoElement?.('anam-audio')
+      const el = mediaRef.current
+      if (!el) throw new Error('Media element not mounted')
+      try {
+        if (typeof client.streamToVideoElement === 'function') await client.streamToVideoElement(el)
+        else if (typeof client.stream === 'function') await client.stream(el)
+      } catch (e) {
+        try { await client.streamToVideoElement?.(el.id) } catch (e2) { throw e }
       }
+      try { el.muted = false; el.volume = 1; await el.play() } catch {}
 
       setCallState('live')
     } catch (e) {
       console.error('[avatar] start failed', e)
-      setErrMsg(e.message || String(e))
+      const msg = e.message || String(e)
+      setCallError(msg.includes('anam_not_configured')
+        ? 'Avatar service is not configured (ANAM_API_KEY missing on the server).'
+        : msg)
       setCallState('error')
-      showToast({ kind: 'danger', text: e.message?.includes('anam_not_configured')
-        ? 'Avatar is not configured on this server. Set ANAM_API_KEY in Render env vars.'
-        : 'Could not start the avatar. Falling back to text.' })
     }
-  }, [persona, showToast])
+  }, [persona, callState])
 
-  // ── Stream a reply chunk-by-chunk into the avatar ─────────────────────
-  async function streamReply(userText, anamClient) {
+  function stopCall(silent = false) {
+    try { anamRef.current?.stopStreaming?.() } catch {}
+    try { anamRef.current?.disconnect?.() } catch {}
+    anamRef.current = null
+    try { if (mediaRef.current) { mediaRef.current.srcObject = null; mediaRef.current.pause() } } catch {}
+    if (!silent) setCallState('idle')
+    setMuted(false); setScreenSharing(false); setCallError(null)
+  }
+
+  async function streamReply(userText, anamClient = null) {
     setThinking(true)
     setMessages(m => [...m, { role: 'user', text: userText }])
-    const newMessages = [...messagesRef.current, { role: 'user', text: userText }]
+    const allMessages = [...messagesRef.current, { role: 'user', text: userText }]
 
     const token = getToken()
     const body = {
       persona,
-      messages: newMessages.map(m => ({ role: m.role, content: m.text || m.html?.replace(/<[^>]+>/g, '') || '' })),
+      messages: allMessages.map(m => ({ role: m.role, content: m.text || '' })),
       useWebSearch: !!useWebSearch,
       extraSystem: extraSystem || undefined,
     }
-    let buffer = ''
-    let citations = []
 
+    let buffer = ''
+    const citations = []
+    let placeholderIndex = -1
     try {
       const res = await fetch('/api/ai/stream', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'authorization': `Bearer ${token}` },
         body: JSON.stringify(body),
       })
-      if (!res.ok || !res.body) throw new Error(`stream ${res.status}`)
+      if (!res.ok || !res.body) throw new Error(`stream HTTP ${res.status}`)
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let leftover = ''
 
-      setMessages(m => [...m, { role: 'bot', text: '' }])
+      setMessages(m => { placeholderIndex = m.length; return [...m, { role: 'bot', text: '' }] })
 
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
-        const text = decoder.decode(value, { stream: true })
-        const lines = (leftover + text).split('\n')
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = (leftover + chunk).split('\n')
         leftover = lines.pop() || ''
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
-          let payload
-          try { payload = JSON.parse(line.slice(6)) } catch { continue }
-          if (payload.delta) {
-            buffer += payload.delta
-            setMessages(m => {
-              const copy = m.slice()
-              copy[copy.length - 1] = { role: 'bot', text: buffer }
-              return copy
-            })
-            // pipe into avatar (if live)
-            try { anamClient?.streamMessageChunk?.(payload.delta) } catch {}
+          let p
+          try { p = JSON.parse(line.slice(6)) } catch { continue }
+          if (p.delta) {
+            buffer += p.delta
+            const idx = placeholderIndex
+            setMessages(m => { const c = m.slice(); if (idx >= 0 && c[idx]) c[idx] = { ...c[idx], text: buffer }; return c })
+            try { anamClient?.streamMessageChunk?.(p.delta) } catch {}
           }
-          if (payload.citation?.url) citations.push(payload.citation)
-          if (payload.done) {
-            // attach citations to the last bubble
+          if (p.citation?.url) citations.push(p.citation)
+          if (p.done) {
             if (citations.length) {
-              setMessages(m => {
-                const copy = m.slice()
-                const last = copy[copy.length - 1]
-                copy[copy.length - 1] = { ...last, citations }
-                return copy
-              })
+              const idx = placeholderIndex
+              setMessages(m => { const c = m.slice(); if (idx >= 0) c[idx] = { ...c[idx], citations }; return c })
             }
             try { anamClient?.endMessage?.() } catch {}
           }
-          if (payload.error) {
-            setMessages(m => {
-              const copy = m.slice()
-              copy[copy.length - 1] = { role: 'bot', text: `(error) ${payload.error}` }
-              return copy
-            })
+          if (p.error) {
+            const idx = placeholderIndex
+            setMessages(m => { const c = m.slice(); if (idx >= 0) c[idx] = { ...c[idx], text: `(error) ${p.error}` }; return c })
           }
         }
       }
     } catch (e) {
       console.error('[stream]', e)
       setMessages(m => [...m, { role: 'bot', text: 'Sorry, I lost the connection. Please try again.' }])
-    } finally {
-      setThinking(false)
-    }
-  }
-
-  // ── Mode handlers ─────────────────────────────────────────────────────
-  function pickMode(next) {
-    if (next === mode) return
-    if ((mode === 'voice' || mode === 'video') && callState === 'live') stopAnam()
-    setMode(next)
-    if (next === 'voice' || next === 'video') startAnam(next)
-  }
-
-  function endCall() {
-    stopAnam(); setMode('text')
-  }
-
-  function toggleMute() {
-    setMuted(m => !m)
-    try {
-      const c = anamRef.current
-      if (c?.muteInputAudio) c.muteInputAudio(!muted)
-      else if (c?.setInputAudioEnabled) c.setInputAudioEnabled(muted) // toggled value
-    } catch {}
-  }
-
-  async function toggleScreenShare() {
-    if (screenSharing) {
-      // stop screen share — Anam doesn't natively share; we drop the substituted track
-      setScreenSharing(false)
-      showToast({ kind: 'info', text: 'Screen sharing stopped.' })
-    } else {
-      try {
-        // request the screen — purely client-side display, also visible if recording
-        await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
-        setScreenSharing(true)
-        showToast({ kind: 'success', text: 'Screen shared with the assistant.' })
-      } catch {
-        showToast({ kind: 'warn', text: 'Screen share denied.' })
-      }
-    }
+    } finally { setThinking(false) }
   }
 
   function sendText() {
@@ -224,91 +169,132 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
     setInput('')
     streamReply(t, anamRef.current)
   }
+  function toggleMute() {
+    setMuted(m => !m)
+    try {
+      const c = anamRef.current
+      if (c?.muteInputAudio) c.muteInputAudio(!muted)
+      else if (c?.setInputAudioEnabled) c.setInputAudioEnabled(muted)
+    } catch {}
+  }
+  async function toggleScreenShare() {
+    if (screenSharing) { setScreenSharing(false); showToast({ kind: 'info', text: 'Screen sharing stopped.' }); return }
+    try {
+      await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+      setScreenSharing(true)
+      showToast({ kind: 'success', text: 'Screen shared with the assistant.' })
+    } catch { showToast({ kind: 'warn', text: 'Screen share denied.' }) }
+  }
 
-  // ── Render ─────────────────────────────────────────────────────────────
+  const isCalling = callState === 'connecting' || callState === 'live'
+  const personaShort = (title || '').split(' · ')[0] || 'Assistant'
+
   return (
     <div className="flex flex-col h-full" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      {/* Header */}
-      <div className="px-5 pt-4 pb-3 border-b border-bdr-light flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[12px] font-bold uppercase tracking-wider text-primary">{title || 'AI Companion'}</div>
-          <div className="text-[12px] text-txt-secondary truncate">{intro || 'Talk in text, voice, or video.'}</div>
-        </div>
-        <ModeToggle mode={mode} onPick={pickMode} />
+      <div className="px-5 pt-4 pb-3 border-b border-bdr-light flex-shrink-0">
+        <div className="text-[12px] font-bold uppercase tracking-wider text-primary">{title || 'AI Companion'}</div>
+        <div className="text-[12px] text-txt-secondary">{intro || 'Chat in text, or start a voice / video call.'}</div>
       </div>
 
-      {/* Avatar stage (voice/video) */}
-      {(mode === 'voice' || mode === 'video') && (
-        <div className="relative bg-gradient-to-b from-primary-light to-white flex-shrink-0">
-          <div className={`mx-auto ${mode === 'video' ? 'aspect-video max-w-[640px]' : 'aspect-square w-[180px]'} relative`}>
-            {/* Anam injects <video> into the element with the matching id */}
-            <video
-              id={mode === 'video' ? 'anam-video' : 'anam-audio'}
-              ref={mode === 'video' ? videoRef : audioRef}
-              playsInline
-              autoPlay
-              className={`w-full h-full rounded-2xl object-cover ${mode === 'voice' ? 'opacity-0 absolute inset-0' : ''} bg-slate-100`}
-            />
-            {mode === 'voice' && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-32 h-32 rounded-full bg-primary text-white flex items-center justify-center text-[64px] shadow-modal">
-                  <Volume2 className="w-12 h-12" />
-                </div>
-              </div>
-            )}
-            {callState === 'connecting' && (
-              <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center text-primary font-bold gap-2">
-                <Loader2 className="w-5 h-5 animate-spin" /> Connecting to avatar…
-              </div>
-            )}
-            {callState === 'error' && (
-              <div className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center p-6 text-center text-danger">
-                <div className="font-bold text-[15px]">Couldn't start the avatar</div>
-                <div className="text-[12px] text-txt-secondary mt-1">{errMsg || 'Unknown error'}</div>
-                <button onClick={() => pickMode('text')} className="mt-3 px-3 py-1.5 rounded-pill bg-primary text-white text-[12px] font-bold">Continue in text</button>
-              </div>
-            )}
-          </div>
+      {/* Always-rendered media element so Anam can mount whenever the user starts a call */}
+      <video ref={mediaRef} id={`anam-media-${persona}`} playsInline autoPlay
+        className="hidden" />
 
-          {/* Call controls */}
-          {callState === 'live' && (
-            <div className="flex items-center justify-center gap-3 py-3">
-              <CtrlBtn onClick={toggleMute} tone={muted ? 'danger' : 'neutral'} title={muted ? 'Unmute' : 'Mute'}>
-                {muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </CtrlBtn>
-              {mode === 'video' && (
-                <CtrlBtn onClick={toggleScreenShare} tone={screenSharing ? 'primary' : 'neutral'} title={screenSharing ? 'Stop sharing' : 'Share screen'}>
-                  {screenSharing ? <ScreenShareOff className="w-4 h-4" /> : <ScreenShare className="w-4 h-4" />}
-                </CtrlBtn>
-              )}
-              <CtrlBtn onClick={endCall} tone="danger" title="End call">
-                <Phone className="w-4 h-4 rotate-[135deg]" />
-              </CtrlBtn>
+      {/* Call panel */}
+      <div className="flex-shrink-0 border-b border-bdr-light">
+        {callState === 'idle' && (
+          <div className="px-5 py-4 bg-gradient-to-b from-primary-light/40 to-white">
+            <div className="text-[13px] font-bold text-txt-primary mb-2">📞 Start a call with {personaShort}</div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="inline-flex rounded-pill border border-bdr-light bg-white p-0.5">
+                <ModeBtn active={callMode === 'voice'} onClick={() => setCallMode('voice')} icon={Mic}   label="Voice" />
+                <ModeBtn active={callMode === 'video'} onClick={() => setCallMode('video')} icon={Video} label="Video" />
+              </div>
+              <button onClick={startCall}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-pill bg-primary text-white font-bold text-[13px] shadow-modal hover:opacity-90 active:scale-95 transition">
+                <PhoneCall className="w-4 h-4" /> Start {callMode === 'video' ? 'Video' : 'Voice'} Call
+              </button>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Chat thread (always shown — even during voice/video) */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2.5">
-        {messages.length === 0 && (
-          <div className="text-center py-8 text-txt-secondary text-[13px]">
-            {mode === 'text'
-              ? 'Type a message to start chatting.'
-              : callState === 'live'
-                ? 'Speak to the avatar. Your conversation appears here too.'
-                : `Tap ${mode} to start the call, or just chat below.`}
+            <div className="text-[10px] text-txt-tertiary mt-2">Anam minutes are only used during a live call. Text chat below is always free.</div>
           </div>
+        )}
+
+        {isCalling && (
+          <div className="bg-gradient-to-b from-primary-light/40 to-white p-4">
+            <div className={`mx-auto relative ${callMode === 'video' ? 'aspect-video max-w-[480px]' : 'h-[140px] flex items-center justify-center'}`}>
+              {callMode === 'video' ? (
+                <VideoMirror sourceRef={mediaRef} />
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-full bg-primary text-white flex items-center justify-center shadow-modal animate-pulse">
+                    <Volume2 className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <div className="text-[14px] font-bold text-txt-primary">{personaShort} is listening…</div>
+                    <div className="text-[11px] text-txt-secondary mt-0.5">Speak naturally. Your voice is transcribed and answered live.</div>
+                  </div>
+                </div>
+              )}
+              {callState === 'connecting' && (
+                <div className="absolute inset-0 bg-white/85 rounded-2xl flex items-center justify-center text-primary font-bold gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin" /> Connecting…
+                </div>
+              )}
+            </div>
+
+            {callState === 'live' && (
+              <div className="flex items-center justify-center gap-3 mt-3">
+                <CtrlBtn onClick={toggleMute} tone={muted ? 'danger' : 'neutral'} title={muted ? 'Unmute' : 'Mute'}>
+                  {muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </CtrlBtn>
+                {callMode === 'video' && (
+                  <CtrlBtn onClick={toggleScreenShare} tone={screenSharing ? 'primary' : 'neutral'} title={screenSharing ? 'Stop sharing' : 'Share screen'}>
+                    {screenSharing ? <ScreenShareOff className="w-4 h-4" /> : <ScreenShare className="w-4 h-4" />}
+                  </CtrlBtn>
+                )}
+                <button onClick={() => stopCall()} title="End call"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-pill bg-danger text-white font-bold text-[13px] hover:bg-danger/90">
+                  <PhoneOff className="w-4 h-4" /> End Call
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {callState === 'error' && (
+          <div className="px-5 py-4 bg-rose-50">
+            <div className="text-[13px] font-bold text-danger">Couldn't start the call</div>
+            <div className="text-[12px] text-txt-secondary mt-1">{callError}</div>
+            <button onClick={() => setCallState('idle')} className="mt-2 px-3 py-1 rounded-pill bg-primary text-white text-[12px] font-bold">Try again</button>
+          </div>
+        )}
+      </div>
+
+      {/* Chat */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2.5">
+        {messages.length === 0 && suggestions.length > 0 && (
+          <div className="mb-3">
+            <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary mb-2">Try asking</div>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s, i) => (
+                <button key={i} onClick={() => streamReply(s, anamRef.current)}
+                  className="text-left text-[12px] px-3 py-2 rounded-2xl border border-bdr-light bg-white hover:border-primary">
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.length === 0 && suggestions.length === 0 && (
+          <div className="text-center py-6 text-txt-secondary text-[13px]">Type below or start a call.</div>
         )}
         {messages.map((m, i) => (
           <div key={i}>
-            <ChatBubble role={m.role} text={m.text} html={m.html} />
+            <ChatBubble role={m.role} text={m.text} />
             {m.citations?.length > 0 && (
-              <div className="text-[10px] text-txt-tertiary mt-1 ml-2 flex flex-wrap gap-x-3 gap-y-0.5">
+              <div className="text-[10px] text-txt-tertiary mt-1 ml-2 flex flex-wrap gap-x-3">
                 {m.citations.map((c, j) => (
-                  <a key={j} href={c.url} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate max-w-[260px]">
-                    {c.title || c.url}
-                  </a>
+                  <a key={j} href={c.url} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate max-w-[260px]">{c.title || c.url}</a>
                 ))}
               </div>
             )}
@@ -317,14 +303,12 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
         {thinking && <div className="text-[11px] text-txt-tertiary px-2">thinking…</div>}
       </div>
 
-      {/* Text input */}
-      <div className="px-4 py-3 border-t border-bdr-light bg-white">
+      {/* Input */}
+      <div className="px-4 py-3 border-t border-bdr-light bg-white flex-shrink-0">
         <div className="flex items-center gap-2 rounded-pill border border-bdr-light bg-surface-page px-2 py-1.5">
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
+          <input value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && sendText()}
-            placeholder={mode === 'text' ? `Message ${title || 'assistant'}…` : 'Or type instead of speaking…'}
+            placeholder={`Message ${personaShort}…`}
             className="flex-1 bg-transparent text-[14px] px-3 py-1.5 outline-none placeholder:text-txt-tertiary" />
           <button onClick={sendText} disabled={!input.trim() || thinking}
             className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center disabled:bg-slate-300">
@@ -336,28 +320,32 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
   )
 }
 
-function ModeToggle({ mode, onPick }) {
-  const opts = [
-    { id: 'text',  icon: MessageSquare, label: 'Text' },
-    { id: 'voice', icon: Mic,           label: 'Voice' },
-    { id: 'video', icon: Video,         label: 'Video' },
-  ]
-  return (
-    <div className="inline-flex rounded-pill border border-bdr-light bg-surface-page p-0.5 flex-shrink-0">
-      {opts.map(o => {
-        const Icon = o.icon
-        const active = mode === o.id
-        return (
-          <button key={o.id} onClick={() => onPick(o.id)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-pill text-[12px] font-bold transition ${active ? 'bg-primary text-white shadow-card' : 'text-txt-secondary hover:text-txt-primary'}`}>
-            <Icon className="w-3.5 h-3.5" /> {o.label}
-          </button>
-        )
-      })}
-    </div>
-  )
+// Mirrors the hidden source <video>'s stream into a visible <video> for video-mode display.
+function VideoMirror({ sourceRef }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    const src = sourceRef.current
+    const dst = ref.current
+    if (!src || !dst) return
+    function sync() {
+      try { dst.srcObject = src.srcObject; dst.muted = true; dst.play() } catch {}
+    }
+    sync()
+    src.addEventListener('loadedmetadata', sync)
+    const t = setInterval(sync, 500) // catch late-attached streams
+    return () => { try { src.removeEventListener('loadedmetadata', sync); clearInterval(t) } catch {} }
+  }, [sourceRef])
+  return <video ref={ref} playsInline autoPlay muted className="w-full h-full rounded-2xl object-cover bg-slate-900" />
 }
 
+function ModeBtn({ active, onClick, icon: Icon, label }) {
+  return (
+    <button onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-pill text-[12px] font-bold transition ${active ? 'bg-primary text-white' : 'text-txt-secondary hover:text-txt-primary'}`}>
+      <Icon className="w-3.5 h-3.5" /> {label}
+    </button>
+  )
+}
 function CtrlBtn({ children, onClick, tone = 'neutral', title }) {
   const css = tone === 'danger'  ? 'bg-danger text-white hover:bg-danger/90'
             : tone === 'primary' ? 'bg-primary text-white hover:opacity-90'

@@ -20,6 +20,7 @@ import NotificationsCanvas from './NotificationsCanvas.jsx'
 import CareerCounsellorCanvas from './CareerCounsellorCanvas.jsx'
 import MockInterviewCanvas from './MockInterviewCanvas.jsx'
 import LearningAssistantCanvas from './LearningAssistantCanvas.jsx'
+import SwiftyAssistantCanvas from './SwiftyAssistantCanvas.jsx'
 import GenericCanvas from './GenericCanvas.jsx'
 
 export const CANVAS_MODULES = {
@@ -45,6 +46,7 @@ export const CANVAS_MODULES = {
   career_counsellor:    CareerCounsellorCanvas,
   mock_interview:       MockInterviewCanvas,
   learning_assistant:   LearningAssistantCanvas,
+  swifty_assistant:     SwiftyAssistantCanvas,
   notifications:        NotificationsCanvas,
 
   // Generic placeholder for any type not yet built — renders a clean "coming next" page
