@@ -33,7 +33,7 @@ export default function SplashPage() {
 
         {/* Mascot */}
         <div className="flex justify-center flex-shrink-0">
-          <Mascot size={180} />
+          <Mascot size={220} />
         </div>
 
         {/* Heading — sits immediately below mascot */}
@@ -77,9 +77,9 @@ export default function SplashPage() {
           Continue
         </button>
 
-        {/* PoweredBy — bottom of fold */}
-        <div className="mt-auto flex justify-center pt-3 flex-shrink-0">
-          <PoweredBy size={20} />
+        {/* PoweredBy — sits right below Continue */}
+        <div className="flex justify-center mt-3 flex-shrink-0">
+          <PoweredBy size={28} />
         </div>
       </div>
     </div>
