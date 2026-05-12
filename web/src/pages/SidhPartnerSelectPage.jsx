@@ -12,44 +12,42 @@ import {
 import NsdcLogo from '../components/NsdcLogo.jsx'
 import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
 
+// All 19 SIDH partner types, tagged with `bucket: partner | admin`.
+// Partner = delivery / accreditation / industry roles.
+// Admin = governance roles (NSDC, schemes, SSC, India Skills, RDSDE, PMU).
 const PARTNERS = [
-  // Field operations
-  { id: 'mobilizer',         label: 'Mobilizer',          icon: Share2,         desc: 'Encourage candidate registrations using a personalised QR code.',                 maps: 'training_partner' },
-  { id: 'trainer',           label: 'Trainer',            icon: GraduationCap,  desc: 'Empower individuals with essential skills & knowledge to be employable.',        maps: 'trainer' },
-  { id: 'mentor',            label: 'Mentor',             icon: User,           desc: 'Guide and coach trainees through the skilling journey.',                         maps: 'trainer' },
+  // ── PARTNER ────────────────────────────────────────────────────────────
+  { bucket: 'partner', id: 'mobilizer',         label: 'Mobilizer',                       icon: Share2,         desc: 'Encourage candidate registrations using a personalised QR code.',                 maps: 'training_partner' },
+  { bucket: 'partner', id: 'trainer',           label: 'Trainer',                         icon: GraduationCap,  desc: 'Empower individuals with essential skills & knowledge to be employable.',        maps: 'trainer' },
+  { bucket: 'partner', id: 'mentor',            label: 'Mentor',                          icon: User,           desc: 'Guide and coach trainees through the skilling journey.',                         maps: 'trainer' },
+  { bucket: 'partner', id: 'training_partner',  label: 'Training Partner',                icon: Handshake,      desc: 'Build a skilled workforce through industry-relevant training.',                  maps: 'training_partner' },
+  { bucket: 'partner', id: 'training_centre',   label: 'Training Centre',                 icon: School,         desc: 'Provide specialised facilities for comprehensive skill development.',            maps: 'training_centre' },
+  { bucket: 'partner', id: 'btp',               label: 'Basic Training Providers — BTP',  icon: BookOpen,       desc: 'Deliver Basic Training under the Apprenticeship (NAPS) framework.',              maps: 'training_partner' },
+  { bucket: 'partner', id: 'institutional',     label: 'Institutional Partner',           icon: Landmark,       desc: 'Universities, ITIs, and institutional bodies running skilling programmes.',     maps: 'training_partner' },
+  { bucket: 'partner', id: 'awarding_body',     label: 'Awarding Body',                   icon: Award,          desc: 'Accredit and certify individuals or institutions based on QP standards.',        maps: 'ssc' },
+  { bucket: 'partner', id: 'tpa',               label: 'TPA',                             icon: Network,        desc: 'Third Party Aggregators consolidating capacity across partners.',                maps: 'ssc' },
+  { bucket: 'partner', id: 'apprenticeship_ssc',label: 'Apprenticeship SSC/AB',           icon: Briefcase,      desc: 'Apprenticeship Sector Skills Council / Awarding Body for NAPS.',                 maps: 'ssc' },
+  { bucket: 'partner', id: 'assessor',          label: 'Assessor',                        icon: UserSquare2,    desc: 'Assess and evaluate the performance & competency of learners.',                  maps: 'assessor' },
+  { bucket: 'partner', id: 'assessment_agency', label: 'Assessment Agency',               icon: ClipboardCheck, desc: 'Conduct assessments to ensure standardised evaluation of skills.',               maps: 'assessor' },
+  { bucket: 'partner', id: 'establishment',     label: 'Establishment',                   icon: Building2,      desc: 'Industry establishments hosting apprentices / verifying placements.',            maps: 'employer' },
 
-  // Training providers
-  { id: 'training_partner',  label: 'Training Partner',   icon: Handshake,      desc: 'Build a skilled workforce through industry-relevant training.',                  maps: 'training_partner' },
-  { id: 'training_centre',   label: 'Training Centre',    icon: School,         desc: 'Provide specialised facilities for comprehensive skill development.',            maps: 'training_centre' },
-  { id: 'btp',               label: 'Basic Training Providers — BTP', icon: BookOpen, desc: 'Deliver Basic Training under the Apprenticeship (NAPS) framework.',       maps: 'training_partner' },
-  { id: 'institutional',     label: 'Institutional Partner', icon: Landmark,    desc: 'Universities, ITIs, and institutional bodies running skilling programmes.',     maps: 'training_partner' },
-
-  // Accreditation / standards
-  { id: 'awarding_body',     label: 'Awarding Body',      icon: Award,          desc: 'Accredit and certify individuals or institutions based on QP standards.',        maps: 'ssc' },
-  { id: 'tpa',               label: 'TPA',                icon: Network,        desc: 'Third Party Aggregators consolidating capacity across partners.',                maps: 'ssc' },
-  { id: 'apprenticeship_ssc',label: 'Apprenticeship SSC/AB', icon: Briefcase,   desc: 'Apprenticeship Sector Skills Council / Awarding Body for NAPS.',                 maps: 'ssc' },
-
-  // Assessment
-  { id: 'assessor',          label: 'Assessor',           icon: UserSquare2,    desc: 'Assess and evaluate the performance & competency of learners.',                  maps: 'assessor' },
-  { id: 'assessment_agency', label: 'Assessment Agency',  icon: ClipboardCheck, desc: 'Conduct assessments to ensure standardised evaluation of skills.',               maps: 'assessor' },
-
-  // Industry
-  { id: 'establishment',     label: 'Establishment',      icon: Building2,      desc: 'Industry establishments hosting apprentices / verifying placements.',            maps: 'employer' },
-
-  // NSDC / Govt admin
-  { id: 'nsdc_admin',        label: 'NSDC Admin',         icon: Settings,       desc: 'NSDC administrative role across schemes, accreditations and outcomes.',          maps: 'nsdc_officer' },
-  { id: 'rdsde',             label: 'RDSDE',              icon: Map,            desc: 'Regional Directorate Skill Development & Entrepreneurship — regional admin.',   maps: 'nsdc_officer' },
-  { id: 'scheme_admin',      label: 'Scheme Admin',       icon: Layers,         desc: 'Per-scheme administrator: PMKVY, DDU-GKY, NAPS, SIB, PM Vishwakarma…',          maps: 'nsdc_officer' },
-  { id: 'pmu',               label: 'Project Management Unit (PMU)', icon: ClipboardList, desc: 'Admin/PMU/Scheme administrator: assess and evaluate the requests.',     maps: 'nsdc_officer' },
-  { id: 'india_skills',      label: 'India Skills Admin', icon: Trophy,         desc: 'Accredit and certify eligible participants of the India Skills 2025-26 competition.', maps: 'nsdc_officer' },
-
-  // 19th — placeholder for the partner type the screenshots cut off
-  { id: 'sector_skills',     label: 'Sector Skills Council', icon: Users,       desc: 'Sector body owning Qualification Packs and standards for a sector.',             maps: 'ssc' },
+  // ── ADMIN ──────────────────────────────────────────────────────────────
+  { bucket: 'admin',   id: 'nsdc_admin',        label: 'NSDC Admin',                      icon: Settings,       desc: 'NSDC administrative role across schemes, accreditations and outcomes.',          maps: 'nsdc_officer' },
+  { bucket: 'admin',   id: 'scheme_admin',      label: 'Scheme Admin',                    icon: Layers,         desc: 'Per-scheme administrator: PMKVY, DDU-GKY, NAPS, SIB, PM Vishwakarma…',          maps: 'nsdc_officer' },
+  { bucket: 'admin',   id: 'sector_skills',     label: 'Sector Skills Council',           icon: Users,          desc: 'Sector body owning Qualification Packs and competency standards.',               maps: 'ssc' },
+  { bucket: 'admin',   id: 'india_skills',      label: 'India Skills Admin',              icon: Trophy,         desc: 'Accredit and certify participants of the India Skills competition.',             maps: 'nsdc_officer' },
+  { bucket: 'admin',   id: 'rdsde',             label: 'RDSDE',                           icon: Map,            desc: 'Regional Directorate Skill Development & Entrepreneurship — regional admin.',   maps: 'nsdc_officer' },
+  { bucket: 'admin',   id: 'pmu',               label: 'Project Management Unit (PMU)',   icon: ClipboardList,  desc: 'PMU / Scheme administrator: assess and evaluate the requests.',                  maps: 'nsdc_officer' },
 ]
 
 export default function SidhPartnerSelectPage() {
   const { navigate, goBack } = useApp()
   const [hover, setHover] = useState(null)
+
+  // Mode = 'partner' (default) or 'admin' — set by SidhAccountTypePage.
+  const mode = sessionStorage.getItem('ksk.sidhMode') || 'partner'
+  const isAdminMode = mode === 'admin'
+  const visible = PARTNERS.filter(p => p.bucket === mode)
 
   function pick(p) {
     sessionStorage.setItem('ksk.sidhPartnerType', p.id)
@@ -76,22 +74,23 @@ export default function SidhPartnerSelectPage() {
         </div>
       </div>
 
-      {/* Hero */}
+      {/* Hero — heading varies by mode (partner | admin) */}
       <div className="max-w-6xl w-full mx-auto px-6 pt-8 pb-4">
-        <div className="text-[12px] font-bold uppercase tracking-wider text-primary">Login as Partner</div>
+        <div className="text-[12px] font-bold uppercase tracking-wider text-primary">{isAdminMode ? 'Login as Admin' : 'Login as Partner'}</div>
         <h1 className="text-[28px] md:text-[32px] font-bold text-txt-primary mt-1 leading-tight">
-          Select your <span className="text-primary">partner type</span>
+          Select your <span className="text-primary">{isAdminMode ? 'admin role' : 'partner type'}</span>
         </h1>
         <p className="text-[14px] text-txt-secondary mt-1.5 max-w-2xl">
-          KSK federates with SIDH for partner SSO. Choose how your organisation is registered with the
-          National Skill Development Corporation. {PARTNERS.length} partner types supported.
+          {isAdminMode
+            ? `Governance and administrative roles across NSDC, schemes, sector councils, and India Skills. ${visible.length} admin roles.`
+            : `KSK federates with SIDH for partner SSO. Choose how your organisation is registered with NSDC. ${visible.length} partner types supported.`}
         </p>
       </div>
 
-      {/* Partner grid */}
+      {/* Partner / Admin grid */}
       <div className="flex-1 max-w-6xl w-full mx-auto px-6 pb-10">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {PARTNERS.map(p => {
+          {visible.map(p => {
             const Icon = p.icon
             return (
               <button key={p.id} onClick={() => pick(p)} onMouseEnter={() => setHover(p.id)} onMouseLeave={() => setHover(null)}
@@ -113,8 +112,11 @@ export default function SidhPartnerSelectPage() {
         </div>
 
         <div className="mt-8 rounded-2xl border border-bdr-light bg-[#F4F6FA] px-4 py-3 text-[12px] text-txt-secondary">
-          <b className="text-txt-primary">Don't see your role?</b> Trainees, funders, and stipend payment officers
-          should use phone OTP instead. <button onClick={() => navigate('login')} className="text-primary font-bold ml-1">← Back to login</button>
+          <b className="text-txt-primary">Looking for a different role?</b>{' '}
+          {isAdminMode
+            ? <>Browse <button onClick={() => { sessionStorage.setItem('ksk.sidhMode', 'partner'); navigate('sidh_partners') }} className="text-primary font-bold">Partner roles</button> (training partners, assessors, employers, etc.) or </>
+            : <>Browse <button onClick={() => { sessionStorage.setItem('ksk.sidhMode', 'admin'); navigate('sidh_partners') }} className="text-primary font-bold">Admin roles</button> (NSDC, Scheme, SSC, India Skills, RDSDE, PMU) or </>}
+          <button onClick={() => navigate('sidh_account')} className="text-primary font-bold ml-1">← Change account type</button>
         </div>
       </div>
 

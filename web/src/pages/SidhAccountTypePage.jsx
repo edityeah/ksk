@@ -1,5 +1,5 @@
-// SIDH Account Type — first choice after "Login with SIDH". Mirrors the real
-// SIDH portal: two large cards, Learner/Participant vs Partner.
+// SIDH Account Type — first choice after "Login with SIDH".
+// Four buckets: Learner · Participant · Partner · Admin.
 
 import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
@@ -11,15 +11,25 @@ export default function SidhAccountTypePage() {
   const { navigate, goBack } = useApp()
   const [hover, setHover] = useState(null)
 
-  function pick(kind) {
-    if (kind === 'learner') {
-      sessionStorage.setItem('ksk.sidhPartnerType', 'learner')
-      sessionStorage.setItem('ksk.sidhPartnerLabel', 'Learner / Participant')
-      sessionStorage.setItem('ksk.sidhRoleMap', 'trainee')
-      navigate('sidh_redirect')
-    } else {
-      navigate('sidh_partners')
-    }
+  function pickLearner() {
+    sessionStorage.setItem('ksk.sidhPartnerType', 'learner')
+    sessionStorage.setItem('ksk.sidhPartnerLabel', 'Learner')
+    sessionStorage.setItem('ksk.sidhRoleMap', 'trainee')
+    navigate('sidh_redirect')
+  }
+  function pickParticipant() {
+    sessionStorage.setItem('ksk.sidhPartnerType', 'participant')
+    sessionStorage.setItem('ksk.sidhPartnerLabel', 'Participant')
+    sessionStorage.setItem('ksk.sidhRoleMap', 'trainee')
+    navigate('sidh_redirect')
+  }
+  function pickPartner() {
+    sessionStorage.setItem('ksk.sidhMode', 'partner')
+    navigate('sidh_partners')
+  }
+  function pickAdmin() {
+    sessionStorage.setItem('ksk.sidhMode', 'admin')
+    navigate('sidh_partners')
   }
 
   return (
@@ -41,33 +51,47 @@ export default function SidhAccountTypePage() {
       </div>
 
       {/* Hero */}
-      <div className="max-w-5xl w-full mx-auto px-6 pt-10 pb-6">
+      <div className="max-w-6xl w-full mx-auto px-6 pt-10 pb-6">
         <div className="text-[12px] font-bold uppercase tracking-wider text-primary">Sign in to SIDH</div>
         <h1 className="text-[28px] md:text-[34px] font-bold text-txt-primary mt-1 leading-tight">
           How would you like <span className="text-primary">to continue?</span>
         </h1>
         <p className="text-[14px] text-txt-secondary mt-1.5 max-w-2xl">
-          Choose your account type. Learners discover skilling courses and certifications. Partners
-          deliver, assess, accredit, or administer the skilling ecosystem.
+          Choose your account type. Learners and Participants are individuals; Partners
+          deliver, assess and accredit; Admins govern schemes and the ecosystem.
         </p>
       </div>
 
-      {/* Two cards */}
-      <div className="flex-1 max-w-5xl w-full mx-auto px-6 pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      {/* Four cards */}
+      <div className="flex-1 max-w-6xl w-full mx-auto px-6 pb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card
             hover={hover === 'learner'} onHover={() => setHover('learner')} onLeave={() => setHover(null)}
-            onClick={() => pick('learner')}
-            title="Learner / Participant"
-            desc="Learn from several Skill Courses, find Skill Centres near you, build a verified Skill Passport, get placed, and track your stipend."
+            onClick={pickLearner}
+            title="Learner"
+            desc="Discover skilling courses, find Skill Centres, build your Skill Passport."
             illustration={<LearnerIllustration />}
           />
           <Card
+            hover={hover === 'participant'} onHover={() => setHover('participant')} onLeave={() => setHover(null)}
+            onClick={pickParticipant}
+            title="Participant"
+            desc="Currently enrolled in a scheme — PMKVY, NAPS, DDU-GKY — track progress, certifications, placement and retention."
+            illustration={<ParticipantIllustration />}
+          />
+          <Card
             hover={hover === 'partner'} onHover={() => setHover('partner')} onLeave={() => setHover(null)}
-            onClick={() => pick('partner')}
+            onClick={pickPartner}
             title="Partner"
-            desc="Training Partner, Training Centre, Trainer, Assessor, Awarding Body, Employer, NSDC Admin, Mentor, and more — 19 partner types."
+            desc="Training Partner, Training Centre, Trainer, Assessor, Assessment Agency, Awarding Body, Establishment and more."
             illustration={<PartnerIllustration />}
+          />
+          <Card
+            hover={hover === 'admin'} onHover={() => setHover('admin')} onLeave={() => setHover(null)}
+            onClick={pickAdmin}
+            title="Admin"
+            desc="NSDC, Scheme, Sector Skills Council, India Skills, RDSDE, PMU — govern and administer the skilling ecosystem."
+            illustration={<AdminIllustration />}
           />
         </div>
 
@@ -80,7 +104,6 @@ export default function SidhAccountTypePage() {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="bg-[#0A2540] text-white text-center py-3 text-[11px] opacity-90">
         © Skill India Digital Hub · A Government of India initiative · NSDC · MSDE
       </div>
@@ -91,73 +114,75 @@ export default function SidhAccountTypePage() {
 function Card({ hover, onHover, onLeave, onClick, title, desc, illustration }) {
   return (
     <button onClick={onClick} onMouseEnter={onHover} onMouseLeave={onLeave}
-      className="relative text-left rounded-2xl border-2 p-5 md:p-7 transition-all active:scale-[0.98] hover:shadow-card flex items-center gap-4 md:gap-6"
-      style={{ borderColor: hover ? '#386AF6' : '#E8EDF5', background: '#fff', minHeight: 160 }}>
-      <div className="flex-shrink-0">{illustration}</div>
-      <div className="flex-1 min-w-0">
-        <div className="text-[20px] md:text-[24px] font-bold text-txt-primary leading-tight">{title}</div>
-        <p className="text-[13px] text-txt-secondary leading-snug mt-2 line-clamp-3">{desc}</p>
-        <div className="mt-3 inline-flex items-center gap-1 text-[13px] font-bold" style={{ color: '#F26B22' }}>
-          Continue <span>→</span>
-        </div>
+      className="relative text-left rounded-2xl border-2 p-5 transition-all active:scale-[0.98] hover:shadow-card flex flex-col items-center gap-3"
+      style={{ borderColor: hover ? '#386AF6' : '#E8EDF5', background: '#fff', minHeight: 270 }}>
+      <div className="absolute top-3 right-3 w-5 h-5 rounded-full border-2" style={{ borderColor: hover ? '#386AF6' : '#CBD5E1' }} />
+      <div className="mt-2">{illustration}</div>
+      <div className="text-center">
+        <div className="text-[18px] font-bold text-txt-primary leading-tight">{title}</div>
+        <p className="text-[12px] text-txt-secondary leading-snug mt-2 line-clamp-4">{desc}</p>
       </div>
-      <div className="absolute top-4 left-4 w-5 h-5 rounded-full border-2" style={{ borderColor: hover ? '#386AF6' : '#CBD5E1' }} />
+      <div className="mt-auto inline-flex items-center gap-1 text-[12px] font-bold" style={{ color: '#F26B22' }}>
+        Continue <span>→</span>
+      </div>
     </button>
   )
 }
 
-// ── Inline SVG illustrations (mirrors the SIDH portal cards) ───────────────
+// ── Illustrations ────────────────────────────────────────────────────────
 function LearnerIllustration() {
   return (
-    <svg width="120" height="120" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="80" cy="120" rx="68" ry="14" fill="#EEF2FF" />
-      <circle cx="50" cy="78" r="34" fill="#EEF2FF" />
-      {/* student with book */}
-      <g transform="translate(28 50)">
-        <rect x="6" y="48" width="36" height="32" rx="4" fill="#386AF6" />
-        <circle cx="24" cy="36" r="14" fill="#FFD7B3" />
-        <path d="M10 36 a14 14 0 0 1 28 0 v-3 a14 14 0 0 0 -28 0z" fill="#2755E3" />
-        <rect x="18" y="58" width="12" height="3" fill="#fff" opacity="0.5" />
-      </g>
-      {/* second student with laptop */}
-      <g transform="translate(72 56)">
-        <rect x="0" y="48" width="44" height="28" rx="4" fill="#FF9933" />
-        <circle cx="22" cy="38" r="12" fill="#FFD7B3" />
-        <path d="M10 38 a12 12 0 0 1 24 0 v-2 a12 12 0 0 0 -24 0z" fill="#7C3A0A" />
-        <rect x="10" y="56" width="24" height="3" fill="#fff" opacity="0.5" />
-      </g>
-      {/* book/laptop accents */}
-      <rect x="100" y="98" width="28" height="18" rx="2" fill="#0A2540" />
-      <rect x="103" y="100" width="22" height="13" fill="#5B89FF" />
+    <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="#EEF2FF" />
+      <circle cx="50" cy="38" r="12" fill="#FFD7B3" />
+      <path d="M34 38 a16 16 0 0 1 32 0 v-4 a16 16 0 0 0 -32 0z" fill="#386AF6" />
+      <rect x="32" y="56" width="36" height="26" rx="4" fill="#FF9933" />
+      <rect x="22" y="60" width="22" height="14" rx="2" fill="#0A2540" />
+      <rect x="24" y="62" width="18" height="10" fill="#5B89FF" />
     </svg>
   )
 }
-
+function ParticipantIllustration() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="#FEF3C7" />
+      <circle cx="50" cy="36" r="11" fill="#FFD7B3" />
+      <path d="M35 36 a15 15 0 0 1 30 0 v-3 a15 15 0 0 0 -30 0z" fill="#D97706" />
+      <rect x="32" y="52" width="36" height="30" rx="4" fill="#386AF6" />
+      <circle cx="50" cy="68" r="6" fill="#fff" />
+      <text x="50" y="71" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#386AF6">★</text>
+      <circle cx="74" cy="28" r="9" fill="#FF9933" />
+      <text x="74" y="32" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#fff">₹</text>
+    </svg>
+  )
+}
 function PartnerIllustration() {
   return (
-    <svg width="120" height="120" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="80" cy="120" rx="68" ry="14" fill="#EEF2FF" />
-      <circle cx="80" cy="80" r="58" fill="#EEF2FF" opacity="0.6" />
-      {/* two people shaking hands */}
-      <g transform="translate(20 38)">
-        <circle cx="22" cy="22" r="14" fill="#FFD7B3" />
-        <path d="M8 22 a14 14 0 0 1 28 0 v-2 a14 14 0 0 0 -28 0z" fill="#2755E3" />
-        <rect x="4" y="36" width="40" height="36" rx="4" fill="#FF9933" />
+    <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="#EEF2FF" />
+      <g>
+        <circle cx="32" cy="32" r="9" fill="#FFD7B3" />
+        <path d="M23 32 a9 9 0 0 1 18 0 v-2 a9 9 0 0 0 -18 0z" fill="#386AF6" />
+        <rect x="18" y="42" width="28" height="30" rx="3" fill="#FF9933" />
       </g>
-      <g transform="translate(80 38)">
-        <circle cx="22" cy="22" r="14" fill="#FFD7B3" />
-        <path d="M8 22 a14 14 0 0 1 28 0 v-2 a14 14 0 0 0 -28 0z" fill="#7C3A0A" />
-        <rect x="4" y="36" width="40" height="36" rx="4" fill="#386AF6" />
+      <g>
+        <circle cx="68" cy="32" r="9" fill="#FFD7B3" />
+        <path d="M59 32 a9 9 0 0 1 18 0 v-2 a9 9 0 0 0 -18 0z" fill="#7C3A0A" />
+        <rect x="54" y="42" width="28" height="30" rx="3" fill="#138808" />
       </g>
-      {/* handshake */}
-      <rect x="64" y="80" width="32" height="8" rx="4" fill="#FFD7B3" stroke="#0A2540" strokeWidth="1.5" />
-      {/* rupee coin accents */}
-      <circle cx="42" cy="40" r="10" fill="#FF9933" />
-      <text x="42" y="44" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#fff">₹</text>
-      <circle cx="120" cy="50" r="10" fill="#FF9933" />
-      <text x="120" y="54" textAnchor="middle" fontSize="11" fontWeight="bold" fill="#fff">₹</text>
-      <circle cx="118" cy="86" r="9" fill="#FF9933" />
-      <text x="118" y="89" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#fff">₹</text>
+      <rect x="40" y="56" width="20" height="6" rx="3" fill="#FFD7B3" stroke="#0A2540" strokeWidth="1" />
+    </svg>
+  )
+}
+function AdminIllustration() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="#E0F2FE" />
+      {/* shield */}
+      <path d="M50 12 L78 22 V52 C78 70 65 82 50 88 C35 82 22 70 22 52 V22 L50 12 Z" fill="#0A2540" stroke="#fff" strokeWidth="2" />
+      <path d="M50 22 L70 30 V52 C70 64 60 73 50 78 C40 73 30 64 30 52 V30 L50 22 Z" fill="#386AF6" />
+      <path d="M40 50 L48 58 L62 42" stroke="#fff" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="50" cy="35" r="3" fill="#FF9933" />
     </svg>
   )
 }
