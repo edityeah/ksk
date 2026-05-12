@@ -19,7 +19,10 @@ services:
       cd web && npm install --include=dev --no-audit --no-fund && npm run build
       test -f dist/index.html || (echo 'Vite build failed: web/dist/index.html missing' && exit 1)
       cd ../server && npm install --include=dev --no-audit --no-fund && npx prisma generate
-    startCommand: cd server && npx prisma db push --accept-data-loss --skip-generate && node src/index.js
+    # Universal launcher — works regardless of which npm-start chain Render
+    # resolves to. start.cjs builds web/dist if missing, applies Prisma schema,
+    # then execs the Express server with NODE_ENV=production.
+    startCommand: node start.cjs
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV

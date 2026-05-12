@@ -5,8 +5,8 @@
   "type": "module",
   "description": "KSK — Kaushal Samiksha Kendra on SwiftChat (NSDC skilling M&E command centre)",
   "scripts": {
-    "build": "cd web && npm run build",
-    "start": "cd server && node src/index.js",
+    "build": "cd web && npm install --include=dev --no-audit --no-fund && npm run build",
+    "start": "node start.cjs",
     "dev:web": "cd web && npm run dev",
     "dev:server": "cd server && npm run dev",
     "db:push": "cd server && npm run db:push",
