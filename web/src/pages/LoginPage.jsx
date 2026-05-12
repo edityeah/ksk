@@ -141,7 +141,7 @@ function LoginPanel({ navigate }) {
   // shared button block — used inside both mobile bottom-sheet and desktop right panel
   const Buttons = () => (
     <>
-      <button onClick={() => navigate('sidh_redirect')}
+      <button onClick={() => navigate('sidh_partners')}
         className="w-full bg-primary text-white font-bold text-[15px] py-3.5 rounded-pill shadow-modal active:opacity-80 transition-opacity"
         style={{ fontFamily: 'Montserrat, sans-serif', letterSpacing: '0.2px' }}>
         Login with SIDH

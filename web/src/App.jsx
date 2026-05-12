@@ -5,6 +5,7 @@ import PhoneEntryPage from './pages/PhoneEntryPage.jsx'
 import PhoneOtpPage from './pages/PhoneOtpPage.jsx'
 import AadhaarEntryPage from './pages/AadhaarEntryPage.jsx'
 import AadhaarOtpPage from './pages/AadhaarOtpPage.jsx'
+import SidhPartnerSelectPage from './pages/SidhPartnerSelectPage.jsx'
 import SidhRedirectPage from './pages/SidhRedirectPage.jsx'
 import SidhVerifyingPage from './pages/SidhVerifyingPage.jsx'
 import SidhResultPage from './pages/SidhResultPage.jsx'
@@ -19,6 +20,7 @@ const ROUTES = {
   phone_otp: <PhoneOtpPage />,
   aadhaar_entry: <AadhaarEntryPage />,
   aadhaar_otp: <AadhaarOtpPage />,
+  sidh_partners: <SidhPartnerSelectPage />,
   sidh_redirect: <SidhRedirectPage />,
   sidh_verifying: <SidhVerifyingPage />,
   sidh_success: <SidhResultPage ok />,
@@ -26,7 +28,7 @@ const ROUTES = {
   home: <HomePage />,
 }
 
-const AUTH_SCREENS = new Set(['splash', 'login', 'phone_entry', 'phone_otp', 'aadhaar_entry', 'aadhaar_otp', 'sidh_redirect', 'sidh_verifying', 'sidh_success', 'sidh_fail'])
+const AUTH_SCREENS = new Set(['splash', 'login', 'phone_entry', 'phone_otp', 'aadhaar_entry', 'aadhaar_otp', 'sidh_partners', 'sidh_redirect', 'sidh_verifying', 'sidh_success', 'sidh_fail'])
 
 export default function App() {
   const { screen, canvas } = useApp()

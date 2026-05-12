@@ -57,14 +57,24 @@ export default function PhoneEntryPage() {
       <div className="flex-1 md:flex-none flex flex-col overflow-y-auto bg-white" style={{ width: '100%' }}>
         {/* Mobile */}
         <div className="md:hidden w-full flex flex-col">
-          <div className="px-6 pt-6 pb-2"><Logo size={30} showText /></div>
+          <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+            <button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary px-2 py-1 rounded-lg hover:bg-slate-100">
+              ‹ Back
+            </button>
+            <Logo size={26} showText />
+          </div>
           <FormBody phone={phone} onChange={onChange} canProceed={canProceed} submit={submit} busy={busy} goBack={goBack} demoUsers={demoUsers} onPickDemo={setPhone} />
           <div className="flex justify-center pb-6 px-6 text-[100px]">📱</div>
         </div>
         {/* Desktop */}
         <div className="hidden md:flex flex-col justify-center h-full"
           style={{ width: 'clamp(340px, 38%, 460px)', marginLeft: 'auto', marginRight: 'auto', padding: '0 32px' }}>
-          <div className="mb-8"><Logo size={30} showText /></div>
+          <div className="mb-8 flex items-center justify-between">
+            <button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary px-2 py-1 rounded-lg hover:bg-slate-100">
+              ‹ Back
+            </button>
+            <Logo size={30} showText />
+          </div>
           <FormBody phone={phone} onChange={onChange} canProceed={canProceed} submit={submit} busy={busy} goBack={goBack} demoUsers={demoUsers} onPickDemo={setPhone} />
         </div>
       </div>

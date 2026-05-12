@@ -1,46 +1,51 @@
-// KSK Phone OTP — visually mirrors SwiftChat PhoneOTPPage. 4-digit OTP boxes with
-// status colours, 40s resend timer, split mobile/desktop layout, paste handling.
+// KSK Phone OTP — 4-digit boxes. Form JSX is inlined (not a nested component) so
+// refs and focus stay stable across re-renders. Includes top-of-page back button.
 
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api } from '../api/client.js'
 import Logo from '../components/Logo.jsx'
+import { ChevronLeft } from 'lucide-react'
 
 const OTP_LEN = 4
 const OTP_TIMER = 40
 
 export default function PhoneOtpPage() {
-  const { navigate, goBack, completeLogin, showToast } = useApp()
+  const { goBack, completeLogin, showToast } = useApp()
   const phone = sessionStorage.getItem('ksk.pendingPhone') || ''
   const role = sessionStorage.getItem('ksk.pendingRole') || ''
 
   const [otp, setOtp] = useState(Array(OTP_LEN).fill(''))
-  const [status, setStatus] = useState('idle')   // idle | error | success
+  const [status, setStatus] = useState('idle')
   const [secs, setSecs] = useState(OTP_TIMER)
   const [busy, setBusy] = useState(false)
-  const inputRefs = useRef([])
+  const refs = useRef([])
   const timerRef = useRef(null)
 
   useEffect(() => {
     timerRef.current = setInterval(() => setSecs(s => { if (s <= 1) { clearInterval(timerRef.current); return 0 } return s - 1 }), 1000)
-    inputRefs.current[0]?.focus()
+    refs.current[0]?.focus()
     return () => clearInterval(timerRef.current)
   }, [])
 
-  function handleChange(i, val) {
-    const digit = val.replace(/\D/g, '').slice(-1)
-    const next = [...otp]; next[i] = digit; setOtp(next); setStatus('idle')
-    if (digit && i < OTP_LEN - 1) inputRefs.current[i + 1]?.focus()
+  function handleChange(i, v) {
+    const d = v.replace(/\D/g, '').slice(-1)
+    setOtp(prev => { const n = [...prev]; n[i] = d; return n })
+    setStatus('idle')
+    if (d && i < OTP_LEN - 1) refs.current[i + 1]?.focus()
   }
   function handleKey(i, e) {
-    if (e.key === 'Backspace' && !otp[i] && i > 0) inputRefs.current[i - 1]?.focus()
+    if (e.key === 'Backspace' && !otp[i] && i > 0) refs.current[i - 1]?.focus()
   }
   function handlePaste(e) {
     const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LEN)
     if (!text) return
-    const next = [...otp]
-    text.split('').forEach((d, i) => { next[i] = d })
-    setOtp(next); inputRefs.current[Math.min(text.length, OTP_LEN - 1)]?.focus()
+    setOtp(prev => {
+      const n = [...prev]
+      text.split('').forEach((d, i) => { n[i] = d })
+      return n
+    })
+    refs.current[Math.min(text.length, OTP_LEN - 1)]?.focus()
   }
 
   const filled = otp.every(d => d !== '')
@@ -60,14 +65,14 @@ export default function PhoneOtpPage() {
 
   function resend() {
     clearInterval(timerRef.current); setSecs(OTP_TIMER); setOtp(Array(OTP_LEN).fill('')); setStatus('idle')
-    inputRefs.current[0]?.focus()
+    refs.current[0]?.focus()
     timerRef.current = setInterval(() => setSecs(s => { if (s <= 1) { clearInterval(timerRef.current); return 0 } return s - 1 }), 1000)
     api.requestPhoneOtp(phone).catch(() => {})
     showToast({ kind: 'success', text: 'OTP resent ✓' })
   }
 
   function boxStyle(d) {
-    const base = { width: 56, height: 56, fontSize: 24, fontWeight: 700, borderRadius: 16, border: '2px solid', outline: 'none', textAlign: 'center', transition: 'all 0.15s', fontFamily: 'Montserrat, sans-serif' }
+    const base = { width: 56, height: 56, fontSize: 24, fontWeight: 700, borderRadius: 16, border: '2px solid', outline: 'none', textAlign: 'center', fontFamily: 'Montserrat, sans-serif' }
     if (status === 'error')   return { ...base, background: '#FFF0F0', borderColor: '#EF4444', color: '#EF4444' }
     if (status === 'success') return { ...base, background: '#F0FFF4', borderColor: '#10B981', color: '#10B981' }
     if (d)                    return { ...base, background: '#EEF3FF', borderColor: '#386AF6', color: '#1A1F36' }
@@ -76,7 +81,7 @@ export default function PhoneOtpPage() {
 
   const mask = phone ? `+91 ••••• ${phone.slice(-5)}` : '+91 ••••• •••••'
 
-  const FormBody = () => (
+  const formBody = (
     <div className="px-6 pb-6">
       <div className="mb-8">
         <h1 className="text-[28px] font-bold leading-tight mb-2" style={{ color: '#1A1F36' }}>
@@ -92,8 +97,8 @@ export default function PhoneOtpPage() {
 
       <div className="flex gap-3 mb-2" onPaste={handlePaste}>
         {otp.map((d, i) => (
-          <input key={i} ref={el => inputRefs.current[i] = el}
-            type="tel" inputMode="numeric" maxLength={1}
+          <input key={i} ref={el => refs.current[i] = el}
+            type="tel" inputMode="numeric" maxLength={1} autoComplete="one-time-code"
             value={d} onChange={e => handleChange(i, e.target.value)} onKeyDown={e => handleKey(i, e)}
             style={boxStyle(d)} />
         ))}
@@ -125,27 +130,29 @@ export default function PhoneOtpPage() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row overflow-hidden bg-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      <div className="hidden md:flex flex-col items-center justify-center overflow-hidden"
+      <div className="hidden md:flex flex-col overflow-hidden"
         style={{ flex: '1 1 0', background: 'linear-gradient(135deg, #EEF3FF 0%, #F5F0FF 100%)' }}>
-        <div className="relative flex flex-col items-center justify-center gap-6 px-10 text-center w-full h-full">
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full" style={{ background: 'rgba(56,106,246,0.07)', transform: 'translate(30%,-30%)' }} />
-          <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full" style={{ background: 'rgba(124,58,237,0.06)', transform: 'translate(-30%,30%)' }} />
-          <div className="text-[140px] leading-none">🔐</div>
-          <div>
-            <h3 className="text-[18px] font-bold text-txt-primary mb-1">Quick & Secure</h3>
-            <p className="text-[13px] text-txt-secondary max-w-[260px] leading-relaxed mx-auto">Your OTP expires in {OTP_TIMER} seconds. Never share it with anyone.</p>
-          </div>
+        <div className="p-6"><button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary"><ChevronLeft className="w-4 h-4" /> Back</button></div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 px-10 text-center">
+          <div className="text-[140px]">🔐</div>
+          <h3 className="text-[18px] font-bold text-txt-primary">Quick & Secure</h3>
+          <p className="text-[13px] text-txt-secondary max-w-[260px] leading-relaxed mx-auto">Your OTP expires in {OTP_TIMER} seconds. Never share it with anyone.</p>
         </div>
       </div>
 
       <div className="md:hidden flex-1 flex flex-col overflow-y-auto bg-white">
-        <div className="px-6 pt-6 pb-2"><Logo size={30} showText /></div>
-        <FormBody />
+        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+          <button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary px-2 py-1 rounded-lg hover:bg-slate-100">
+            <ChevronLeft className="w-4 h-4" /> Back
+          </button>
+          <Logo size={26} showText />
+        </div>
+        {formBody}
       </div>
 
       <div className="hidden md:flex flex-col justify-center" style={{ width: 'clamp(340px, 38%, 460px)', flexShrink: 0, padding: '0 16px' }}>
-        <div className="mb-8 px-6"><Logo size={30} showText /></div>
-        <FormBody />
+        <div className="px-6 mb-6 mt-6"><Logo size={30} showText /></div>
+        {formBody}
       </div>
     </div>
   )
