@@ -25,7 +25,7 @@ export default function LanguagePage() {
       <div className="flex-1 grid grid-cols-2 gap-3 px-6 pb-8 content-start">
         {LANGS.map(l => (
           <button key={l.code} onClick={() => pick(l.code)}
-            className="rounded-card border border-bdr-light p-4 text-left hover:border-primary-500 hover:shadow-card transition">
+            className="rounded-card border border-bdr-light p-4 text-left hover:border-primary hover:shadow-card transition">
             <div className="text-lg font-medium">{l.native}</div>
             <div className="text-xs text-txt-secondary mt-0.5">{l.label}</div>
           </button>

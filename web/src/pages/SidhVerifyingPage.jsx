@@ -29,10 +29,10 @@ export default function SidhVerifyingPage() {
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-6">
         <div className="bg-white rounded-card shadow-card p-8 w-full max-w-md text-center">
-          <div className="w-12 h-12 mx-auto rounded-full border-4 border-primary-500 border-t-transparent animate-spin mb-4" />
+          <div className="w-12 h-12 mx-auto rounded-full border-4 border-primary border-t-transparent animate-spin mb-4" />
           <div className="font-medium">{STEPS[step]}</div>
           <div className="w-full mt-6 h-2 bg-slate-100 rounded-pill overflow-hidden">
-            <div className="h-full bg-primary-500 transition-all" style={{ width: `${pct}%` }} />
+            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
           </div>
         </div>
       </div>

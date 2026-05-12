@@ -42,7 +42,7 @@ export default function PlacementDeclareCanvas() {
   if (step === 'new') {
     return (
       <div className="p-5 space-y-3">
-        <button onClick={() => setStep('list')} className="text-xs text-primary-600">‹ Back to list</button>
+        <button onClick={() => setStep('list')} className="text-xs text-primary-dark">‹ Back to list</button>
         <h3 className="text-base font-semibold">Declare a new placement</h3>
         <Field label="Trainee">
           <select value={form.traineeId} onChange={e => setForm({ ...form, traineeId: e.target.value })} className="w-full border border-bdr-light rounded px-3 py-2">
@@ -60,7 +60,7 @@ export default function PlacementDeclareCanvas() {
         <Field label="Monthly CTC (₹)"><input value={form.ctcMonthly} onChange={e => setForm({ ...form, ctcMonthly: e.target.value.replace(/\D/g, '') })} className="w-full border border-bdr-light rounded px-3 py-2" /></Field>
         <Field label="Joining date"><input type="date" value={form.joiningDate} onChange={e => setForm({ ...form, joiningDate: e.target.value })} className="w-full border border-bdr-light rounded px-3 py-2" /></Field>
         <button disabled={submitting} onClick={submit}
-          className="mt-2 w-full py-2.5 rounded-card bg-primary-500 text-white font-medium disabled:bg-slate-300">
+          className="mt-2 w-full py-2.5 rounded-card bg-primary text-white font-medium disabled:bg-slate-300">
           {submitting ? 'Declaring…' : 'Declare placement'}
         </button>
         <div className="text-xs text-txt-secondary mt-1">
@@ -77,7 +77,7 @@ export default function PlacementDeclareCanvas() {
           <h3 className="text-base font-semibold">Placements you've declared</h3>
           <p className="text-xs text-txt-secondary">{placements.length} total</p>
         </div>
-        <button onClick={() => setStep('new')} className="px-3 py-1.5 rounded-card bg-primary-500 text-white text-sm">+ New</button>
+        <button onClick={() => setStep('new')} className="px-3 py-1.5 rounded-card bg-primary text-white text-sm">+ New</button>
       </div>
       <div className="divide-y divide-bdr-light rounded-card border border-bdr-light bg-white">
         {placements.map(p => (

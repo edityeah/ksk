@@ -11,7 +11,7 @@ export default function TopBar() {
   return (
     <div className="bg-white border-b border-bdr-light flex items-center px-4 py-2.5 sticky top-0 z-30">
       <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded bg-primary-500 text-white flex items-center justify-center text-xs font-bold">KSK</div>
+        <div className="w-7 h-7 rounded bg-primary text-white flex items-center justify-center text-xs font-bold">KSK</div>
         <div className="text-sm font-semibold hidden md:block">Kaushal Samiksha Kendra</div>
       </div>
       <div className="ml-auto flex items-center gap-3">
@@ -22,7 +22,7 @@ export default function TopBar() {
         <div className="relative">
           <button onClick={() => setOpen(o => !o)}
             className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-100">
-            <div className="w-7 h-7 rounded-pill bg-primary-light text-primary-600 flex items-center justify-center text-xs font-semibold">
+            <div className="w-7 h-7 rounded-pill bg-primary-light text-primary-dark flex items-center justify-center text-xs font-semibold">
               {(user?.name || '?').split(' ').map(s => s[0]).slice(0, 2).join('')}
             </div>
             <div className="text-left hidden md:block">

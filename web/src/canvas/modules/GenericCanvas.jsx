@@ -5,7 +5,7 @@ export default function GenericCanvas({ context }) {
   return (
     <div className="p-6">
       <div className="rounded-card border border-dashed border-bdr-light p-6 text-center bg-slate-50">
-        <Sparkles className="w-7 h-7 text-primary-500 mx-auto mb-2" />
+        <Sparkles className="w-7 h-7 text-primary mx-auto mb-2" />
         <div className="font-medium">Module preview · <span className="font-mono text-sm bg-white px-1.5 py-0.5 rounded">{type}</span></div>
         <p className="text-xs text-txt-secondary mt-2 max-w-md mx-auto">
           The full UI for this module is part of the next build slice. Swifty routed your request here correctly — the

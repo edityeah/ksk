@@ -11,7 +11,7 @@ export default function JobsMarketplaceCanvas() {
         <div key={j.id} className="rounded-card border border-bdr-light bg-white p-3">
           <div className="text-sm font-medium">{j.title}</div>
           <div className="text-xs text-txt-secondary">{j.employer?.name} · {j.location} · ₹{j.ctcMonthly?.toLocaleString('en-IN')}/mo · {j.openings} openings</div>
-          <button className="mt-2 px-3 py-1 rounded-pill bg-primary-500 text-white text-xs">Apply with Skill Passport</button>
+          <button className="mt-2 px-3 py-1 rounded-pill bg-primary text-white text-xs">Apply with Skill Passport</button>
         </div>
       ))}
       {jobs.length === 0 && <div className="text-sm text-txt-secondary">No open jobs.</div>}

@@ -25,8 +25,8 @@ body { font-family: 'Inter', 'Noto Sans Devanagari', system-ui, sans-serif; }
 .badge-warn  { @apply bg-warn-light text-warn; }
 .badge-danger{ @apply bg-danger-light text-danger; }
 .badge-flag  { @apply bg-flag-light text-flag; }
-.badge-info  { @apply bg-primary-light text-primary-600; }
+.badge-info  { @apply bg-primary-light text-primary; }
 
-.chat-bubble-user { @apply bg-primary-500 text-white rounded-2xl rounded-br-md px-3 py-2 max-w-[80%] self-end animate-bubble-in; }
+.chat-bubble-user { @apply bg-primary text-white rounded-2xl rounded-br-md px-3 py-2 max-w-[80%] self-end animate-bubble-in; }
 .chat-bubble-bot  { @apply bg-slate-100 text-txt-primary rounded-2xl rounded-bl-md px-3 py-2 max-w-[85%] self-start animate-bubble-in; }
-.chip { @apply inline-flex items-center px-3 py-1.5 rounded-pill bg-primary-light text-primary-600 text-sm font-medium border border-primary-100 hover:bg-primary-100 cursor-pointer; }
+.chip { @apply inline-flex items-center px-3 py-1.5 rounded-pill bg-primary-light text-primary text-sm font-medium border border-bdr-light hover:bg-primary-50 cursor-pointer; }

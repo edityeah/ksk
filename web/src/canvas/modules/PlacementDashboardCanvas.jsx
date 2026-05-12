@@ -29,7 +29,7 @@ export default function PlacementDashboardCanvas() {
             <div key={f.stage} className="rounded-card border border-bdr-light bg-white p-3">
               <div className="flex items-center justify-between"><div className="text-sm font-medium">{f.stage}</div><div className="text-sm font-mono">{f.count}</div></div>
               <div className="mt-1.5 h-1.5 rounded-pill bg-slate-100 overflow-hidden">
-                <div className="h-full bg-primary-500" style={{ width: `${Math.min(100, (f.count / Math.max(funnel[0]?.count || 1, 1)) * 100)}%` }} />
+                <div className="h-full bg-primary" style={{ width: `${Math.min(100, (f.count / Math.max(funnel[0]?.count || 1, 1)) * 100)}%` }} />
               </div>
             </div>
           ))}

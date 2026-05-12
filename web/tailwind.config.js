@@ -4,24 +4,42 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
+        sans: ['Montserrat', 'Inter', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
+        native: ['Noto Sans', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // NSDC + Skill India palette
-        primary:  { 50: '#E6F2F7', 100: '#CCE5EF', 500: '#0E5B7A', 600: '#0A4A66', 700: '#073B53', light: '#EAF4F8' },
-        saffron:  { 500: '#FF9933' },
-        green:    { 500: '#138808' },
-        ksk:      { navy: '#0A2540', accent: '#0E5B7A', wash: '#F5F8FB' },
-        txt:      { primary: '#0F172A', secondary: '#475569', tertiary: '#94A3B8' },
-        ok:       { DEFAULT: '#16A34A', light: '#DCFCE7' },
-        warn:     { DEFAULT: '#D97706', light: '#FEF3C7' },
-        danger:   { DEFAULT: '#DC2626', light: '#FEE2E2' },
-        flag:     { DEFAULT: '#7C3AED', light: '#EDE9FE' },
+        // SwiftChat tokens — verbatim from the reference repo, retargeted to KSK semantics
+        primary: {
+          DEFAULT: '#386AF6',
+          dark:    '#2755E3',
+          light:   '#EEF2FF',
+          50:      '#F4F6FA',
+        },
+        surface: {
+          DEFAULT:   '#FFFFFF',
+          secondary: '#F5F7FA',
+          chat:      '#F0F4FF',
+          page:      '#F4F6FA',
+        },
+        txt: {
+          primary:   '#1A1F36',
+          secondary: '#7383A5',
+          tertiary:  '#B8C0CC',
+        },
+        bdr: {
+          DEFAULT: '#E8EDF5',
+          light:   '#F0F4FA',
+        },
+        ok:    { DEFAULT: '#4CAF50', light: '#E8F5E9' },
+        warn:  { DEFAULT: '#FFB300', light: '#FFF8E1' },
+        danger:{ DEFAULT: '#E53935', light: '#FFEBEE' },
+        flag:  { DEFAULT: '#7C3AED', light: '#EDE9FE' },
       },
-      borderRadius: { pill: '999px', card: '14px' },
+      borderRadius: { pill: '50px', card: '16px', xl: '12px' },
       boxShadow: {
         card:   '0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06)',
-        modal:  '0 10px 30px rgba(15, 23, 42, 0.15)',
+        modal:  '0 4px 14px rgba(56, 106, 246, 0.18)',
+        bottom: '0 -4px 24px rgba(56, 106, 246, 0.10)',
         canvas: '-8px 0 30px rgba(15, 23, 42, 0.10)',
       },
       keyframes: {

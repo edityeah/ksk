@@ -54,7 +54,7 @@ export default function EmployerConfirmCanvas({ context }) {
         <div className="flex gap-2 overflow-x-auto pb-1">
           {list.map(p => (
             <button key={p.id} onClick={() => { setPlacement(p); setCorrectedCtc(String(p.ctcMonthly)) }}
-              className={`px-3 py-1.5 text-xs rounded-pill whitespace-nowrap border ${placement.id === p.id ? 'border-primary-500 bg-primary-light text-primary-700' : 'border-bdr-light bg-white'}`}>
+              className={`px-3 py-1.5 text-xs rounded-pill whitespace-nowrap border ${placement.id === p.id ? 'border-primary bg-primary-light text-primary-dark' : 'border-bdr-light bg-white'}`}>
               {p.trainee?.name} · {p.state.replace('_', ' ')}
             </button>
           ))}
@@ -72,7 +72,7 @@ export default function EmployerConfirmCanvas({ context }) {
             <label className="block text-xs font-medium text-txt-secondary mt-1 mb-1">Confirm monthly CTC (₹)</label>
             <input value={correctedCtc} onChange={e => setCorrectedCtc(e.target.value.replace(/\D/g, ''))}
               inputMode="numeric"
-              className="w-full px-3 py-2 border border-bdr-light rounded outline-none focus:border-primary-500 mb-3" />
+              className="w-full px-3 py-2 border border-bdr-light rounded outline-none focus:border-primary mb-3" />
             <div className="flex gap-2">
               <button disabled={submitting} onClick={() => submit(true)}
                 className="flex-1 py-2.5 rounded-card bg-ok text-white font-medium hover:bg-ok/90 disabled:opacity-50 inline-flex items-center justify-center gap-2">
@@ -84,7 +84,7 @@ export default function EmployerConfirmCanvas({ context }) {
               </button>
             </div>
             <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Note (if denying)"
-              className="w-full mt-3 px-3 py-2 border border-bdr-light rounded outline-none focus:border-primary-500 text-sm" rows={2} />
+              className="w-full mt-3 px-3 py-2 border border-bdr-light rounded outline-none focus:border-primary text-sm" rows={2} />
           </>
         ) : placement.state === 'conflicted' ? (
           <div className="text-sm text-danger font-medium">You denied this placement. Marked as conflicted.</div>

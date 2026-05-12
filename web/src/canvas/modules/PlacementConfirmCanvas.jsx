@@ -114,7 +114,7 @@ export function VerificationCard({ placement, role }) {
 
 function SignalRow({ label, who, ts, status }) {
   const map = {
-    declared:  { dot: 'bg-primary-500', text: 'text-primary-600', word: 'Declared' },
+    declared:  { dot: 'bg-primary', text: 'text-primary-dark', word: 'Declared' },
     confirmed: { dot: 'bg-ok',          text: 'text-ok',          word: 'Confirmed' },
     pending:   { dot: 'bg-slate-300',   text: 'text-txt-tertiary',word: 'Pending' },
     denied:    { dot: 'bg-danger',      text: 'text-danger',      word: 'Denied' },

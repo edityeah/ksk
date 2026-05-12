@@ -7,7 +7,7 @@ export default function FunderOutcomesCanvas() {
 
   return (
     <div className="p-5 space-y-4">
-      <div className="rounded-card border border-bdr-light bg-primary-light p-3 text-xs text-primary-700">
+      <div className="rounded-card border border-bdr-light bg-primary-light p-3 text-xs text-primary-dark">
         🛡️ Funder view. Verified outcomes only — no trainee PII shown. Numbers reflect the maker-checker triad: training partner + trainee + employer have all confirmed.
       </div>
 

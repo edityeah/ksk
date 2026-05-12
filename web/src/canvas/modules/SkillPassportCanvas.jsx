@@ -17,7 +17,7 @@ export default function SkillPassportCanvas() {
   return (
     <div className="p-5 space-y-4">
       {/* identity card */}
-      <div className="rounded-card border border-bdr-light bg-gradient-to-br from-primary-500 to-primary-700 text-white p-5">
+      <div className="rounded-card border border-bdr-light bg-gradient-to-br from-primary to-primary-dark text-white p-5">
         <div className="text-[10px] uppercase tracking-wider opacity-80">Verified Skill Passport · KSK</div>
         <div className="text-xl font-semibold mt-1">{t.name}</div>
         <div className="text-xs opacity-90 mt-0.5">Aadhaar XXXX XXXX {t.aadhaar?.slice(-4)} · {t.state}/{t.district}</div>

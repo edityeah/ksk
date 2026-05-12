@@ -30,7 +30,7 @@ export default function SidhResultPage({ ok }) {
           </div>
           {!ok && (
             <button onClick={() => navigate('login', true)}
-              className="mt-5 w-full py-2.5 rounded bg-primary-500 text-white font-medium">Try again</button>
+              className="mt-5 w-full py-2.5 rounded bg-primary text-white font-medium">Try again</button>
           )}
         </div>
       </div>

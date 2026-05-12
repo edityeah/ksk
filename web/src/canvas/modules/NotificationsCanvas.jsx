@@ -22,7 +22,7 @@ export default function NotificationsCanvas() {
       {notifications.length === 0 && <div className="text-sm text-txt-secondary">All caught up.</div>}
       {notifications.map(n => (
         <div key={n.id} onClick={() => read(n)}
-          className={`rounded-card border p-3 cursor-pointer ${n.readAt ? 'border-bdr-light bg-white' : 'border-primary-500 bg-primary-light'}`}>
+          className={`rounded-card border p-3 cursor-pointer ${n.readAt ? 'border-bdr-light bg-white' : 'border-primary bg-primary-light'}`}>
           <div className="flex items-start gap-2">
             <div className="text-xs uppercase tracking-wider text-txt-secondary">{n.category}</div>
             {n.priority === 'high' && <span className="badge badge-warn">high</span>}
@@ -32,7 +32,7 @@ export default function NotificationsCanvas() {
           <div className="text-xs text-txt-secondary mt-0.5">{n.message}</div>
           {n.action && (
             <button onClick={(e) => { e.stopPropagation(); act(n) }}
-              className="mt-2 px-3 py-1 rounded-pill bg-primary-500 text-white text-xs">{n.action.label || 'Open'}</button>
+              className="mt-2 px-3 py-1 rounded-pill bg-primary text-white text-xs">{n.action.label || 'Open'}</button>
           )}
         </div>
       ))}

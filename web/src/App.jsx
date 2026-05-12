@@ -1,6 +1,5 @@
 import { useApp } from './context/AppContext.jsx'
 import SplashPage from './pages/SplashPage.jsx'
-import LanguagePage from './pages/LanguagePage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import PhoneEntryPage from './pages/PhoneEntryPage.jsx'
 import PhoneOtpPage from './pages/PhoneOtpPage.jsx'
@@ -15,7 +14,6 @@ import CanvasPanel from './canvas/CanvasPanel.jsx'
 
 const ROUTES = {
   splash: <SplashPage />,
-  language: <LanguagePage />,
   login: <LoginPage />,
   phone_entry: <PhoneEntryPage />,
   phone_otp: <PhoneOtpPage />,
@@ -28,13 +26,19 @@ const ROUTES = {
   home: <HomePage />,
 }
 
+const AUTH_SCREENS = new Set(['splash', 'login', 'phone_entry', 'phone_otp', 'aadhaar_entry', 'aadhaar_otp', 'sidh_redirect', 'sidh_verifying', 'sidh_success', 'sidh_fail'])
+
 export default function App() {
   const { screen, canvas } = useApp()
   const content = ROUTES[screen] || <div className="p-6">Unknown screen: {screen}</div>
+  const isAuth = AUTH_SCREENS.has(screen)
+  const isFull = isAuth || screen === 'home'
 
   return (
-    <div className="min-h-screen bg-slate-50 text-txt-primary">
-      {content}
+    <div className="min-h-screen text-txt-primary" style={{ background: '#F4F6FA', fontFamily: 'Montserrat, sans-serif' }}>
+      <div className={isFull ? 'min-h-screen' : 'min-h-screen max-w-[420px] mx-auto bg-white shadow-card'}>
+        {content}
+      </div>
       {canvas && <CanvasPanel />}
       <Toast />
     </div>

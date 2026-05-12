@@ -26,7 +26,7 @@ export default function StipendQueueCanvas() {
       <div className="flex gap-2">
         {['all', 'pending', 'failed', 'success'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 text-xs rounded-pill ${filter === f ? 'bg-primary-500 text-white' : 'bg-slate-100 text-txt-secondary'}`}>
+            className={`px-3 py-1.5 text-xs rounded-pill ${filter === f ? 'bg-primary text-white' : 'bg-slate-100 text-txt-secondary'}`}>
             {f}
           </button>
         ))}
@@ -44,7 +44,7 @@ export default function StipendQueueCanvas() {
                 <td className="px-3 py-2 text-right">₹{s.amount}</td>
                 <td className="px-3 py-2 text-right text-xs">{s.disbursalState}{s.failureReason ? <span className="block text-danger">{s.failureReason}</span> : null}</td>
                 <td className="px-3 py-2 text-right">
-                  {s.disbursalState === 'failed' && <button disabled={busy} onClick={() => retry(s.id)} className="text-xs px-2 py-1 rounded bg-primary-500 text-white">Retry</button>}
+                  {s.disbursalState === 'failed' && <button disabled={busy} onClick={() => retry(s.id)} className="text-xs px-2 py-1 rounded bg-primary text-white">Retry</button>}
                 </td>
               </tr>
             ))}

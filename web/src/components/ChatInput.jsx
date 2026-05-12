@@ -16,7 +16,7 @@ export default function ChatInput({ onSend, placeholder = 'Type a message…' })
       <input value={v} onChange={e => setV(e.target.value)} placeholder={placeholder}
         className="flex-1 px-3 py-2 rounded-pill bg-slate-100 outline-none text-sm" />
       <button type="submit" disabled={!v.trim()}
-        className="p-2 rounded-pill bg-primary-500 text-white disabled:bg-slate-300">
+        className="p-2 rounded-pill bg-primary text-white disabled:bg-slate-300">
         <Send className="w-5 h-5" />
       </button>
     </form>
