@@ -14,9 +14,11 @@ services:
     branch: main
     autoDeploy: true
     buildCommand: |
-      npm install
-      cd web && npm install && npm run build
-      cd ../server && npm install && npx prisma generate
+      set -e
+      npm install --include=dev --no-audit --no-fund
+      cd web && npm install --include=dev --no-audit --no-fund && npm run build
+      test -f dist/index.html || (echo 'Vite build failed: web/dist/index.html missing' && exit 1)
+      cd ../server && npm install --include=dev --no-audit --no-fund && npx prisma generate
     startCommand: cd server && npx prisma db push --accept-data-loss --skip-generate && node src/index.js
     healthCheckPath: /api/health
     envVars:
