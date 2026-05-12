@@ -8,6 +8,7 @@ import Logo from '../components/Logo.jsx'
 import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
 import NsdcLogo from '../components/NsdcLogo.jsx'
 import PoweredBy from '../components/PoweredBy.jsx'
+import Mascot from '../components/Mascot.jsx'
 
 const SLIDES = [
   { id: 0, headline: 'Trusted by',  bold: '1.64 crore trainees across India', visual: 'students' },
@@ -123,19 +124,40 @@ function MobileHero({ slide, total }) {
 
 function DesktopPanel({ slide, total }) {
   return (
-    <div className="hidden md:flex flex-col h-full overflow-hidden" style={{ background: '#F4F6FA', flex: '1 1 0' }}>
-      <div className="p-8 flex items-center justify-between gap-4">
-        <SwiftChatLogo size={32} />
-        <NsdcLogo size={26} />
+    <div className="hidden md:flex flex-col h-full overflow-hidden relative" style={{ background: '#F4F6FA', flex: '1 1 0' }}>
+      {/* Decorative blobs filling the empty space */}
+      <div className="absolute top-0 left-0 w-[400px] h-[400px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(56,106,246,0.10) 0%, rgba(56,106,246,0) 70%)', transform: 'translate(-30%, -20%)' }} />
+      <div className="absolute bottom-0 right-0 w-[460px] h-[460px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(38,177,76,0.10) 0%, rgba(38,177,76,0) 70%)', transform: 'translate(20%, 25%)' }} />
+      <div className="absolute top-1/3 right-10 w-3 h-3 rounded-full bg-primary opacity-30" />
+      <div className="absolute bottom-1/4 left-12 w-5 h-5 rounded-pill rotate-45 bg-[#26B14C] opacity-20" />
+
+      {/* Header logos */}
+      <div className="p-8 flex items-center justify-between gap-4 relative z-10">
+        <SwiftChatLogo size={36} />
+        <NsdcLogo size={30} />
       </div>
-      <div className="flex-1 relative"><SlideVisual type={slide.visual} /></div>
-      <div className="p-8 pb-10">
-        <p className="text-[13px] font-medium text-txt-secondary">{slide.headline}</p>
-        <p className="text-[15px] font-bold text-txt-primary mt-1 leading-snug max-w-[300px]">{slide.bold}</p>
+
+      {/* Hero — large illustration + mascot */}
+      <div className="flex-1 relative flex flex-col items-center justify-center px-10 z-10">
+        <div className="w-full flex-1 flex items-center justify-center" style={{ minHeight: 320 }}>
+          <div className="w-[min(560px,90%)] aspect-square relative" style={{ transform: 'scale(1.6)' }}>
+            <SlideVisual type={slide.visual} />
+          </div>
+        </div>
+        {/* Mascot — bottom-left, large and welcoming */}
+        <div className="absolute bottom-6 left-8 z-20">
+          <Mascot size={210} />
+        </div>
+      </div>
+
+      {/* Caption + dots */}
+      <div className="p-8 pb-10 relative z-10 max-w-[420px] ml-auto">
+        <p className="text-[14px] font-semibold text-txt-secondary">{slide.headline}</p>
+        <p className="text-[18px] font-bold text-txt-primary mt-1.5 leading-snug">{slide.bold}</p>
         <div className="flex gap-2 mt-5">
           {Array.from({ length: total }).map((_, i) => (
             <div key={i} className="transition-all duration-300 rounded-full"
-              style={{ width: i === slide.id ? 20 : 8, height: 8, background: i === slide.id ? '#386AF6' : '#C5CBDC' }} />
+              style={{ width: i === slide.id ? 24 : 8, height: 8, background: i === slide.id ? '#386AF6' : '#C5CBDC' }} />
           ))}
         </div>
       </div>

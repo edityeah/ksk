@@ -6,6 +6,7 @@ import { Check } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
 import Logo from '../components/Logo.jsx'
 import PoweredBy from '../components/PoweredBy.jsx'
+import Mascot from '../components/Mascot.jsx'
 
 const LANGS = [
   { code: 'en', native: 'English',   english: 'English'   },
@@ -31,9 +32,10 @@ export default function SplashPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-white overflow-y-auto" style={{ fontFamily: 'Montserrat, sans-serif' }}>
       <div className="w-full max-w-[480px] flex flex-col items-center justify-between min-h-screen px-6 py-10 gap-10">
 
-        {/* Top: logo + heading */}
+        {/* Top: mascot + logo + heading */}
         <div className="flex flex-col items-center text-center w-full">
-          <div className="mb-5"><Logo size={64} /></div>
+          <Mascot size={160} className="mb-2" />
+          <div className="mb-3"><Logo size={48} /></div>
           <h1 className="text-[22px] font-bold text-txt-primary mb-1">Choose your language</h1>
           <p className="text-[13px] text-txt-secondary">You can change this anytime from the Settings.</p>
         </div>
