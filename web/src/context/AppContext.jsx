@@ -1,0 +1,129 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { api, clearToken, getToken, setToken } from '../api/client.js'
+
+const Ctx = createContext(null)
+export const useApp = () => useContext(Ctx)
+
+const SESSION_KEY = 'ksk.session.v1'
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY)
+    if (!raw) return null
+    const j = JSON.parse(raw)
+    if (!j || !j.role) return null
+    return j
+  } catch { return null }
+}
+function saveSession(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)) } catch {} }
+
+export function AppProvider({ children }) {
+  const persisted = loadSession()
+  const [screen, setScreenRaw] = useState(persisted?.screen || 'splash')
+  const [stack, setStack] = useState(persisted?.stack || ['splash'])
+  const [role, setRole] = useState(persisted?.role || null)
+  const [user, setUser] = useState(persisted?.user || null)
+  const [lang, setLang] = useState(persisted?.lang || 'en')
+  const [meExtra, setMeExtra] = useState(persisted?.meExtra || null)
+  const [canvas, setCanvas] = useState(null)               // { type, view?, ...ctx }
+  const [toast, setToast] = useState(null)
+  const [notifications, setNotifications] = useState([])
+  const [activeBot, setActiveBot] = useState('swifty')
+
+  const signingOut = useRef(false)
+
+  // hydrate /me on boot if token present
+  useEffect(() => {
+    let cancelled = false
+    async function tick() {
+      const t = getToken()
+      if (!t) return
+      try {
+        const me = await api.me()
+        if (cancelled) return
+        setUser(me.user); setRole(me.user.role); setMeExtra(stripUser(me))
+      } catch {
+        clearToken()
+        setUser(null); setRole(null); setMeExtra(null)
+        setScreenRaw('splash'); setStack(['splash'])
+      }
+    }
+    tick()
+    return () => { cancelled = true }
+  }, [])
+
+  // persist session
+  useEffect(() => {
+    if (signingOut.current) return
+    if (!role) return
+    saveSession({ screen, stack, role, user, meExtra, lang })
+  }, [screen, stack, role, user, meExtra, lang])
+
+  // poll notifications when authenticated
+  useEffect(() => {
+    if (!role) return
+    let cancelled = false
+    const loop = async () => {
+      try {
+        const r = await api.notifications()
+        if (!cancelled) setNotifications(r.notifications || [])
+      } catch {}
+    }
+    loop()
+    const id = setInterval(loop, 8000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [role])
+
+  // ── nav ───────────────────────────────────────────────────────────────
+  const navigate = useCallback((id, replace = false) => {
+    setScreenRaw(id)
+    setStack(s => replace ? [...s.slice(0, -1), id] : [...s, id])
+  }, [])
+  const goBack = useCallback(() => {
+    setStack(s => {
+      if (s.length <= 1) return s
+      const next = s.slice(0, -1); setScreenRaw(next[next.length - 1]); return next
+    })
+  }, [])
+
+  // ── auth ──────────────────────────────────────────────────────────────
+  const completeLogin = useCallback(async (token, u) => {
+    setToken(token)
+    setUser(u); setRole(u.role)
+    try { const me = await api.me(); setMeExtra(stripUser(me)) } catch {}
+    setScreenRaw('home'); setStack(['home'])
+  }, [])
+
+  const signOut = useCallback(() => {
+    signingOut.current = true
+    clearToken()
+    localStorage.removeItem(SESSION_KEY)
+    setUser(null); setRole(null); setMeExtra(null); setCanvas(null); setNotifications([])
+    setScreenRaw('splash'); setStack(['splash'])
+    setTimeout(() => { signingOut.current = false }, 100)
+  }, [])
+
+  // ── canvas ────────────────────────────────────────────────────────────
+  const openCanvas = useCallback((ctx) => setCanvas(ctx), [])
+  const closeCanvas = useCallback(() => setCanvas(null), [])
+  const updateCanvas = useCallback((patch) => setCanvas(c => c ? { ...c, ...patch } : c), [])
+
+  const showToast = useCallback((t) => { setToast(t); setTimeout(() => setToast(null), 3000) }, [])
+
+  const value = useMemo(() => ({
+    screen, stack, navigate, goBack,
+    role, user, meExtra, lang, setLang,
+    isAuthenticated: !!role,
+    completeLogin, signOut,
+    canvas, openCanvas, closeCanvas, updateCanvas,
+    toast, showToast,
+    notifications, refreshNotifications: async () => {
+      try { const r = await api.notifications(); setNotifications(r.notifications || []) } catch {}
+    },
+    activeBot, setActiveBot,
+  }), [screen, stack, navigate, goBack, role, user, meExtra, lang, canvas, toast, notifications, activeBot, completeLogin, signOut, openCanvas, closeCanvas, updateCanvas, showToast])
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+}
+
+function stripUser(me) { const { user, ...rest } = me; return rest }
