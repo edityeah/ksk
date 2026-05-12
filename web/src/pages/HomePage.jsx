@@ -10,7 +10,8 @@ import { dispatchActionForRole } from '../nlp/dispatch.js'
 import NsdcLogo from '../components/NsdcLogo.jsx'
 import ChatBubble from '../components/ChatBubble.jsx'
 import TypingIndicator from '../components/TypingIndicator.jsx'
-import { Bell, LogOut, Plus, Search, Sparkles, Send, Mic, Phone, ChevronUp, MessageSquare } from 'lucide-react'
+import { Bell, LogOut, Plus, Search, Sparkles, Send, Mic, Phone, ChevronUp, ChevronRight, MessageSquare, Menu } from 'lucide-react'
+import CanvasPanel from '../canvas/CanvasPanel.jsx'
 
 const TONES = {
   indigo:  { bg: 'bg-indigo-100',  fg: 'text-indigo-600',  ring: 'hover:border-indigo-300' },
@@ -41,6 +42,25 @@ function Shell({ mobile }) {
 
   const bots = defaultBotsFor(ctx.role)
   const chips = suggestionsFor(ctx.role)
+  const threads = ctx.threads || []
+
+  // Group threads into Today / This week / Earlier buckets for the sidebar.
+  const now = Date.now()
+  const TODAY = 24 * 60 * 60 * 1000
+  const WEEK  = 7 * TODAY
+  const todayT   = threads.filter(t => now - new Date(t.updatedAt).getTime() < TODAY)
+  const weekT    = threads.filter(t => { const d = now - new Date(t.updatedAt).getTime(); return d >= TODAY && d < WEEK })
+  const earlierT = threads.filter(t => now - new Date(t.updatedAt).getTime() >= WEEK)
+
+  function startNewChat() {
+    setMessages([])
+    setShowSidebar(false)
+    ctx.newChat?.()
+  }
+  function openThread(t) {
+    setShowSidebar(false)
+    ctx.openThread?.(t)
+  }
 
   async function send(text) {
     if (!text?.trim()) return
@@ -87,7 +107,7 @@ function Shell({ mobile }) {
         </div>
 
         <div className="px-4">
-          <button onClick={() => setMessages([])}
+          <button onClick={startNewChat}
             className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-pill bg-primary text-white font-bold text-[14px] shadow-modal active:opacity-80">
             <Plus className="w-4 h-4" /> New chat
           </button>
@@ -101,8 +121,17 @@ function Shell({ mobile }) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 mt-3 pb-3">
-          <SidebarGroup title="This week" items={chips.slice(0, 4)} />
-          <SidebarGroup title="Earlier"  items={chips.slice(4)} />
+          {threads.length === 0 ? (
+            <div className="px-3 py-4 text-[11px] text-txt-tertiary leading-relaxed">
+              No conversations yet. Start one by opening a module or tapping "New chat".
+            </div>
+          ) : (
+            <>
+              <ThreadGroup title="Today"     threads={todayT}   onPick={openThread} />
+              <ThreadGroup title="This week" threads={weekT}    onPick={openThread} />
+              <ThreadGroup title="Earlier"   threads={earlierT} onPick={openThread} />
+            </>
+          )}
         </div>
 
         <div className="p-3 border-t border-bdr-light">
@@ -111,20 +140,21 @@ function Shell({ mobile }) {
       </aside>
       {showSidebar && <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setShowSidebar(false)} />}
 
-      {/* Main */}
-      <main className="flex-1 flex flex-col min-w-0 bg-white">
-        <div className="flex items-center justify-between md:justify-end px-4 md:px-6 py-3 border-b border-bdr-light/60 flex-shrink-0">
-          <button onClick={() => setShowSidebar(true)} className="md:hidden p-1.5 rounded hover:bg-slate-100">
-            <MessageSquare className="w-5 h-5 text-txt-secondary" />
+      {/* Main — relative so CanvasPanel overlays inside this area only (not over the sidebar) */}
+      <main className="relative flex-1 flex flex-col min-w-0 bg-white">
+        <div className="flex items-center justify-between md:justify-end px-3 md:px-6 py-3 border-b border-bdr-light/60 flex-shrink-0">
+          <button onClick={() => setShowSidebar(true)} className="md:hidden p-2 rounded-lg hover:bg-slate-100">
+            <Menu className="w-5 h-5 text-txt-secondary" />
           </button>
           <BellButton />
         </div>
-
         {greetedView
           ? <GreetingPanel ctx={ctx} bots={bots} chips={chips} onSend={send} onPickBot={openBot} />
           : <ChatThread messages={messages} typing={typing} onPick={pickChipFromMessage} />}
-
         <MessageInput onSend={send} />
+
+        {/* Canvas — overlay (default) or expanded (fills this main area). Mobile = full-screen. */}
+        <CanvasPanel />
       </main>
     </div>
   )
@@ -140,6 +170,23 @@ function SidebarGroup({ title, items }) {
           <MessageSquare className="w-3.5 h-3.5 text-txt-tertiary flex-shrink-0" />
           <span className="truncate">{label}</span>
         </div>
+      ))}
+    </div>
+  )
+}
+
+// Real persisted threads, clickable to restore the conversation in its canvas.
+function ThreadGroup({ title, threads, onPick }) {
+  if (!threads?.length) return null
+  return (
+    <div className="mb-4">
+      <div className="text-[10px] uppercase tracking-wider font-bold text-txt-tertiary px-2 mb-1">{title}</div>
+      {threads.map(t => (
+        <button key={t.id} onClick={() => onPick(t)}
+          className="w-full text-left px-3 py-2 rounded-xl text-[13px] text-txt-primary hover:bg-surface-page flex items-center gap-2">
+          <MessageSquare className="w-3.5 h-3.5 text-txt-tertiary flex-shrink-0" />
+          <span className="truncate flex-1">{t.title || 'Conversation'}</span>
+        </button>
       ))}
     </div>
   )
@@ -198,13 +245,13 @@ function GreetingPanel({ ctx, bots, chips, onSend, onPickBot }) {
   const first = ctx.user?.name?.split(' ')[0] || 'there'
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-6 md:px-10 pt-10 pb-6">
+      <div className="max-w-5xl mx-auto px-4 md:px-10 pt-6 md:pt-10 pb-6">
         <div className="text-center">
           <div className="text-[12px] font-bold uppercase tracking-[3px] text-primary mb-3">Swifty Assistant</div>
-          <h1 className="text-[34px] md:text-[42px] font-bold text-txt-primary leading-tight">
+          <h1 className="text-[26px] md:text-[42px] font-bold text-txt-primary leading-tight">
             Hi {first} <span aria-hidden>👋</span>,
           </h1>
-          <h2 className="text-[28px] md:text-[36px] font-bold text-txt-primary leading-tight mt-1">
+          <h2 className="text-[22px] md:text-[36px] font-bold text-txt-primary leading-tight mt-1">
             what can I help with?
           </h2>
           <p className="text-[14px] text-txt-secondary mt-3 max-w-2xl mx-auto">

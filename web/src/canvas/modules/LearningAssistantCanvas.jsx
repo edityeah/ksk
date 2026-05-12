@@ -14,9 +14,10 @@ const TONES = {
   sky:    { bg: 'bg-sky-100',     fg: 'text-sky-700' },
 }
 
-export default function LearningAssistantCanvas() {
+export default function LearningAssistantCanvas({ context }) {
   const { meExtra } = useApp()
-  const [primed, setPrimed] = useState(null)
+  const threadId = context?.threadId || null
+  const [pending, setPending] = useState(null)
   const t = meExtra?.trainee
   const track = t?.batch?.track
   const jr = track?.jobRoles?.[0]?.jobRole
@@ -39,7 +40,7 @@ export default function LearningAssistantCanvas() {
       prompt: `Use web search to find the 5 best free YouTube videos and online resources for someone learning ${jr?.name || 'a skilling course'} in India.` },
   ]
 
-  const suggestions = primed ? [primed] : ACTIONS.slice(0, 3).map(a => a.prompt)
+  const suggestions = ACTIONS.slice(0, 3).map(a => a.prompt)
 
   return (
     <div className="flex flex-col h-full">
@@ -56,7 +57,7 @@ export default function LearningAssistantCanvas() {
             const Icon = a.icon
             const tone = TONES[a.tone]
             return (
-              <button key={a.id} onClick={() => setPrimed(a.prompt)}
+              <button key={a.id} onClick={() => setPending({ text: a.prompt, nonce: Date.now() })}
                 className="text-left rounded-2xl border border-bdr-light bg-white hover:border-primary hover:shadow-card transition p-3 flex items-start gap-3">
                 <div className={`w-9 h-9 rounded-xl ${tone.bg} ${tone.fg} flex items-center justify-center flex-shrink-0`}>
                   <Icon className="w-4 h-4" />
@@ -71,7 +72,7 @@ export default function LearningAssistantCanvas() {
           })}
         </div>
         <div className="text-[10px] text-txt-tertiary mt-2.5 inline-flex items-center gap-1">
-          <MessageSquare className="w-3 h-3" /> Tap a card to seed a question, then ask via text or call Guru ji.
+          <MessageSquare className="w-3 h-3" /> Tap a card to ask immediately — or type your own / start a call.
         </div>
       </div>
 
@@ -83,6 +84,8 @@ export default function LearningAssistantCanvas() {
           useWebSearch
           extraSystem={extraSystem}
           suggestions={suggestions}
+          pendingPrompt={pending}
+          threadId={threadId}
         />
       </div>
     </div>

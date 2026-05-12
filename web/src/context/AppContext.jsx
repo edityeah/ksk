@@ -29,6 +29,7 @@ export function AppProvider({ children }) {
   const [toast, setToast] = useState(null)
   const [notifications, setNotifications] = useState([])
   const [activeBot, setActiveBot] = useState('swifty')
+  const [threads, setThreads] = useState([])              // sidebar chat list
 
   const signingOut = useRef(false)
 
@@ -108,6 +109,43 @@ export function AppProvider({ children }) {
   const closeCanvas = useCallback(() => setCanvas(null), [])
   const updateCanvas = useCallback((patch) => setCanvas(c => c ? { ...c, ...patch } : c), [])
 
+  // ── threads (sidebar chat list) ───────────────────────────────────────
+  // Best-effort: failures stay silent — chat still works without the sidebar.
+  const refreshThreads = useCallback(async () => {
+    try {
+      const r = await api.listThreads()
+      setThreads(r.threads || [])
+    } catch {}
+  }, [])
+
+  // Fetch threads whenever the user becomes authenticated.
+  useEffect(() => {
+    if (!role) { setThreads([]); return }
+    refreshThreads()
+  }, [role, refreshThreads])
+
+  // Start a brand-new conversation — close any open canvas so the user lands
+  // back on home, and ask consumers to refresh their thread list.
+  const newChat = useCallback(() => {
+    setCanvas(null)
+    refreshThreads()
+  }, [refreshThreads])
+
+  // Open an existing thread — route to the right canvas based on `bot`, with
+  // `threadId` so AvatarCall loads its message history. The `bot` column holds
+  // the persona slug used at conversation time; map it to a canvas module.
+  const PERSONA_TO_CANVAS = {
+    'career-counsellor':  'career_counsellor',
+    'mock-interviewer':   'mock_interview',
+    'learning-assistant': 'learning_assistant',
+    'general':            'swifty_assistant',
+  }
+  const openThread = useCallback((thread) => {
+    if (!thread?.id) return
+    const canvasType = PERSONA_TO_CANVAS[thread.bot] || thread.bot || 'swifty_assistant'
+    setCanvas({ type: canvasType, threadId: thread.id })
+  }, [])
+
   const showToast = useCallback((t) => { setToast(t); setTimeout(() => setToast(null), 3000) }, [])
 
   const value = useMemo(() => ({
@@ -121,7 +159,8 @@ export function AppProvider({ children }) {
       try { const r = await api.notifications(); setNotifications(r.notifications || []) } catch {}
     },
     activeBot, setActiveBot,
-  }), [screen, stack, navigate, goBack, role, user, meExtra, lang, canvas, toast, notifications, activeBot, completeLogin, signOut, openCanvas, closeCanvas, updateCanvas, showToast])
+    threads, refreshThreads, newChat, openThread,
+  }), [screen, stack, navigate, goBack, role, user, meExtra, lang, canvas, toast, notifications, activeBot, threads, completeLogin, signOut, openCanvas, closeCanvas, updateCanvas, showToast, refreshThreads, newChat, openThread])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

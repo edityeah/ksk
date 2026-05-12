@@ -68,6 +68,12 @@ export const api = {
   aiMessage: (text, language) => req('POST', '/api/ai/message', { text, language }),
   aiAsk:     (question, module) => req('POST', '/api/ai/ask', { question, module }),
 
+  // chats / threads
+  listThreads:     ()                       => req('GET',  '/api/chats'),
+  createThread:    (title, bot)             => req('POST', '/api/chats', { title, bot }),
+  threadMessages:  (id)                     => req('GET',  `/api/chats/${id}/messages`),
+  postMessage:     (id, role, text, meta)   => req('POST', `/api/chats/${id}/messages`, { role, text, meta }),
+
   // lookups
   schemes:   () => req('GET', '/api/lookups/schemes'),
   sectors:   () => req('GET', '/api/lookups/sectors'),

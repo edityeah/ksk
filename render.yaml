@@ -44,6 +44,16 @@ services:
         sync: false                 # leave blank to use Lauren stock voice
       - key: ZEP_API_KEY
         sync: false                 # set in dashboard — Zep Cloud memory
+      - key: CARTESIA_API_KEY
+        sync: false                 # Cartesia TTS (Indian-language voices)
+      - key: CARTESIA_VOICE_ID
+        sync: false
+      - key: CARTESIA_MODEL_ID
+        value: sonic-2
+      - key: OPENAI_REALTIME_MODEL
+        value: gpt-4o-realtime-preview-2024-12-17
+      - key: OPENAI_REALTIME_VOICE
+        value: verse                # alloy · ash · ballad · coral · sage · shimmer · verse
       - key: DATABASE_URL
         fromDatabase:
           name: ksk-db

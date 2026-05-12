@@ -61,8 +61,9 @@ const SUGGESTIONS_BY_ROLE = {
   ],
 }
 
-export default function SwiftyAssistantCanvas() {
+export default function SwiftyAssistantCanvas({ context }) {
   const { user, role, meExtra } = useApp()
+  const threadId = context?.threadId || null
   const roleLabel = ROLE_LABELS[role] || 'KSK user'
   const t = meExtra?.trainee
   const ctx = [
@@ -82,6 +83,7 @@ export default function SwiftyAssistantCanvas() {
       useWebSearch
       extraSystem={ctx + '\n\nYou are Swifty, the general KSK assistant. Help the user navigate the platform — if they ask about courses, jobs, career advice, interview prep, or learning, suggest opening the relevant module by name (Discover Courses, Find Jobs, Career Counsellor, Mock Interview, Learning Assistant). For policy/scheme questions, answer directly (using web search if needed).'}
       suggestions={suggestions}
+      threadId={threadId}
     />
   )
 }

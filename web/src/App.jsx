@@ -12,7 +12,6 @@ import SidhVerifyingPage from './pages/SidhVerifyingPage.jsx'
 import SidhResultPage from './pages/SidhResultPage.jsx'
 import HomePage from './pages/HomePage.jsx'
 import Toast from './components/Toast.jsx'
-import CanvasPanel from './canvas/CanvasPanel.jsx'
 
 const ROUTES = {
   splash: <SplashPage />,
@@ -33,7 +32,7 @@ const ROUTES = {
 const AUTH_SCREENS = new Set(['splash', 'login', 'phone_entry', 'phone_otp', 'aadhaar_entry', 'aadhaar_otp', 'sidh_account', 'sidh_partners', 'sidh_redirect', 'sidh_verifying', 'sidh_success', 'sidh_fail'])
 
 export default function App() {
-  const { screen, canvas } = useApp()
+  const { screen } = useApp()
   const content = ROUTES[screen] || <div className="p-6">Unknown screen: {screen}</div>
   const isAuth = AUTH_SCREENS.has(screen)
   const isFull = isAuth || screen === 'home'
@@ -43,7 +42,6 @@ export default function App() {
       <div className={isFull ? 'min-h-screen' : 'min-h-screen max-w-[420px] mx-auto bg-white shadow-card'}>
         {content}
       </div>
-      {canvas && <CanvasPanel />}
       <Toast />
     </div>
   )

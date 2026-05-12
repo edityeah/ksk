@@ -1,0 +1,214 @@
+// RealtimeVoice — bidirectional voice loop on OpenAI Realtime API via WebRTC.
+//
+// Replaces the DIY pipeline (MediaRecorder → Whisper REST → LLM stream →
+// phrase-split → Cartesia REST → audio blobs) with a single peer connection
+// to OpenAI that does mic capture, server-side VAD, LLM, TTS, and barge-in
+// natively. Perceived latency drops from 3–5 s to ~500 ms; interrupting the
+// AI works because the API itself implements "speech_started → cancel
+// response → speak the new turn".
+//
+// Architecture:
+//   * /api/realtime/session (our server) mints an ephemeral OpenAI key tied
+//     to a persona + extraSystem.
+//   * Browser opens an RTCPeerConnection straight to OpenAI:
+//       - one outbound audio track (mic, getUserMedia)
+//       - one inbound audio track (assistant TTS → <audio> element)
+//       - one data channel for transcripts / status / extra prompts
+//   * SDP offer goes to api.openai.com/v1/realtime, response is plain SDP.
+//
+// Events surfaced to the caller:
+//   onUserTranscript(text)        ← what the user said (final)
+//   onAssistantDelta(text)        ← assistant text as it's being spoken
+//   onAssistantDone(fullText)     ← assistant finished a turn
+//   onState('connecting'|'live'|'closed'|'error', detail?)
+//
+// Lifecycle: new RealtimeVoice({...}).connect()  →  ...  →  .close()
+
+import { getToken } from '../api/client.js'
+
+export class RealtimeVoice {
+  constructor({
+    persona = 'general',
+    extraSystem = '',
+    voice,
+    onUserTranscript,
+    onAssistantDelta,
+    onAssistantDone,
+    onState,
+    onError,
+  } = {}) {
+    this.persona = persona
+    this.extraSystem = extraSystem
+    this.voice = voice
+    this.onUserTranscript = onUserTranscript
+    this.onAssistantDelta = onAssistantDelta
+    this.onAssistantDone = onAssistantDone
+    this.onState = onState
+    this.onError = onError
+
+    this.pc = null              // RTCPeerConnection
+    this.dc = null              // RTCDataChannel for control + transcript events
+    this.localStream = null     // user mic MediaStream
+    this.audioEl = null         // hidden <audio> for assistant playback
+    this.assistantBuffer = ''   // current turn's accumulated assistant text
+    this.closed = false
+  }
+
+  _setState(s, detail) { try { this.onState?.(s, detail) } catch {} }
+
+  async connect() {
+    this._setState('connecting')
+    try {
+      // 1) Get the ephemeral session token from our server.
+      const tok = getToken()
+      const r = await fetch('/api/realtime/session', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'authorization': `Bearer ${tok}` },
+        body: JSON.stringify({ persona: this.persona, extraSystem: this.extraSystem, voice: this.voice }),
+      })
+      if (!r.ok) {
+        const txt = await r.text().catch(() => '')
+        throw new Error(`session mint failed: ${r.status} ${txt.slice(0, 200)}`)
+      }
+      const { clientSecret, model } = await r.json()
+      if (!clientSecret) throw new Error('no client_secret in session response')
+
+      // 2) Capture mic — echoCancellation is critical for barge-in (without it
+      // the model would hear its own voice via the speakers and never stop).
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      })
+
+      // 3) Build the peer connection. Audio out element is created on the fly
+      // so the browser honours autoplay-with-sound after the user gesture
+      // that triggered .connect().
+      const pc = new RTCPeerConnection()
+      this.pc = pc
+
+      this.audioEl = document.createElement('audio')
+      this.audioEl.autoplay = true
+      pc.ontrack = (ev) => {
+        if (this.audioEl) this.audioEl.srcObject = ev.streams[0]
+      }
+      pc.addTrack(this.localStream.getAudioTracks()[0], this.localStream)
+
+      // 4) Data channel for events (transcripts, response control, etc).
+      this.dc = pc.createDataChannel('oai-events')
+      this.dc.addEventListener('message', (ev) => this._handleEvent(ev.data))
+      this.dc.addEventListener('open', () => this._setState('live'))
+
+      pc.onconnectionstatechange = () => {
+        const s = pc.connectionState
+        if (s === 'failed' || s === 'disconnected' || s === 'closed') {
+          if (!this.closed) this._setState('closed', s)
+        }
+      }
+
+      // 5) SDP offer/answer with OpenAI Realtime.
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+
+      const sdpRes = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${clientSecret}`,
+          'Content-Type': 'application/sdp',
+          'OpenAI-Beta': 'realtime=v1',
+        },
+        body: offer.sdp,
+      })
+      if (!sdpRes.ok) {
+        const txt = await sdpRes.text().catch(() => '')
+        throw new Error(`SDP exchange failed: ${sdpRes.status} ${txt.slice(0, 200)}`)
+      }
+      const answer = { type: 'answer', sdp: await sdpRes.text() }
+      await pc.setRemoteDescription(answer)
+    } catch (e) {
+      this._setState('error', e?.message || String(e))
+      this.onError?.(e)
+      this.close()
+      throw e
+    }
+  }
+
+  // Parse a server event off the data channel. We care about a small subset:
+  //   conversation.item.input_audio_transcription.completed → user said X
+  //   response.audio_transcript.delta                      → assistant text (live)
+  //   response.audio_transcript.done                       → assistant turn done
+  //   error                                                → surface to caller
+  _handleEvent(raw) {
+    let e
+    try { e = JSON.parse(raw) } catch { return }
+    switch (e.type) {
+      case 'conversation.item.input_audio_transcription.completed': {
+        const t = (e.transcript || '').trim()
+        if (t) this.onUserTranscript?.(t)
+        break
+      }
+      case 'response.audio_transcript.delta': {
+        const d = e.delta || ''
+        if (!d) break
+        this.assistantBuffer += d
+        this.onAssistantDelta?.(d)
+        break
+      }
+      case 'response.audio_transcript.done':
+      case 'response.done': {
+        const full = (e.transcript || this.assistantBuffer || '').trim()
+        if (full) this.onAssistantDone?.(full)
+        this.assistantBuffer = ''
+        break
+      }
+      case 'input_audio_buffer.speech_started': {
+        // User started speaking — OpenAI will auto-cancel the current
+        // response when interrupt_response is true (we set that on the
+        // session), but we also clear our local assistant buffer so the
+        // next done event doesn't include cancelled-out text.
+        this.assistantBuffer = ''
+        break
+      }
+      case 'error': {
+        console.warn('[realtime] server error', e)
+        this.onError?.(new Error(e.error?.message || 'realtime_error'))
+        break
+      }
+      default:
+        // Many other events flow by (rate.limits.updated, session.updated, etc).
+        // Logging at debug level only.
+        // console.debug('[realtime]', e.type)
+        break
+    }
+  }
+
+  // Inject an additional user message (e.g. when caller types a prompt while
+  // the voice call is live). Triggers an assistant response immediately.
+  sendText(text) {
+    if (!this.dc || this.dc.readyState !== 'open' || !text) return
+    this.dc.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: {
+        type: 'message',
+        role: 'user',
+        content: [{ type: 'input_text', text }],
+      },
+    }))
+    this.dc.send(JSON.stringify({ type: 'response.create' }))
+  }
+
+  // Mute / unmute the outgoing mic track without tearing down the connection.
+  setMuted(muted) {
+    this.localStream?.getAudioTracks().forEach(t => { t.enabled = !muted })
+  }
+
+  close() {
+    if (this.closed) return
+    this.closed = true
+    try { this.dc?.close() } catch {}
+    try { this.pc?.getSenders().forEach(s => s.track?.stop()) } catch {}
+    try { this.pc?.close() } catch {}
+    try { this.localStream?.getTracks().forEach(t => t.stop()) } catch {}
+    try { if (this.audioEl) this.audioEl.srcObject = null } catch {}
+    this.pc = null; this.dc = null; this.localStream = null; this.audioEl = null
+    this._setState('closed')
+  }
+}

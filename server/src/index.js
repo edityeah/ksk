@@ -24,6 +24,9 @@ import notificationRoutes from './routes/notifications.js'
 import chatRoutes from './routes/chats.js'
 import aiRoutes from './routes/ai.js'
 import avatarRoutes from './routes/avatar.js'
+import ttsRoutes from './routes/tts.js'
+import whisperRoutes from './routes/whisper.js'
+import realtimeRoutes from './routes/realtime.js'
 import dashboardRoutes from './routes/dashboards.js'
 import accreditationRoutes from './routes/accreditation.js'
 
@@ -70,6 +73,9 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/chats', chatRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/avatar', avatarRoutes)
+app.use('/api/tts', ttsRoutes)
+app.use('/api/whisper', whisperRoutes)
+app.use('/api/realtime', realtimeRoutes)
 app.use('/api/dashboards', dashboardRoutes)
 app.use('/api/accreditation', accreditationRoutes)
 
