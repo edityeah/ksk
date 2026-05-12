@@ -18,7 +18,22 @@ export default function SidhRedirectPage() {
   const [captcha, setCaptcha] = useState('')
   const [busy, setBusy] = useState(false)
 
-  function fillDemo() { setSidhId('TRN-MB-1001'); setPassword('Demo@123'); setCaptcha('A8K2P') }
+  // Demo SIDH credentials per partner type / role.
+  // Falls back to the trainer SSO if no specific match.
+  const DEMO_BY_ROLE = {
+    trainee:          { id: 'LRN-RANI-001', name: 'Rani Kumari (Learner)' },
+    trainer:          { id: 'TRN-MB-1001',  name: 'Suresh Patel (Trainer)' },
+    training_partner: { id: 'TP-MB-001',    name: 'Priya Kohli (Magic Bus TP)' },
+    training_centre:  { id: 'TC-PAT-001',   name: 'Sunita Devi (Patna Centre)' },
+    employer:         { id: 'EST-RR-PAT-001', name: 'Reliance Retail (Establishment)' },
+    assessor:         { id: 'ASR-RAS-001',  name: 'Lakshmi Ramaswamy (Assessor)' },
+    ssc:              { id: 'SSC-RASCI-001',name: 'Rohit Bhandari (RASCI SSC)' },
+    nsdc_officer:     { id: 'NSDC-001',     name: 'Vrinda Sharma (NSDC)' },
+  }
+  const roleMap = sessionStorage.getItem('ksk.sidhRoleMap') || 'trainer'
+  const demoCreds = DEMO_BY_ROLE[roleMap] || DEMO_BY_ROLE.trainer
+
+  function fillDemo() { setSidhId(demoCreds.id); setPassword('Demo@123'); setCaptcha('A8K2P') }
 
   async function submit() {
     if (!sidhId || !password) { showToast({ kind: 'warn', text: 'Enter SIDH ID and password' }); return }
@@ -76,7 +91,7 @@ export default function SidhRedirectPage() {
             <div>
               <label className="block text-xs font-medium text-txt-secondary mb-1">SIDH ID</label>
               <input value={sidhId} onChange={e => setSidhId(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-bdr-light rounded outline-none focus:border-primary" placeholder="TRN-MB-1001" />
+                className="w-full px-3 py-2 border border-bdr-light rounded outline-none focus:border-primary" placeholder={demoCreds.id} />
             </div>
             <div>
               <label className="block text-xs font-medium text-txt-secondary mb-1">Password</label>
@@ -94,7 +109,9 @@ export default function SidhRedirectPage() {
             <button onClick={submit} disabled={busy} className="w-full py-2.5 rounded bg-primary text-white font-medium hover:bg-primary-dark">
               {busy ? 'Verifying…' : 'Sign in'}
             </button>
-            <button onClick={fillDemo} className="w-full py-2 text-xs text-primary-dark hover:underline">Use demo credentials</button>
+            <button onClick={fillDemo} className="w-full py-2 text-xs text-primary-dark hover:underline">
+              Use demo credentials · <b>{demoCreds.name}</b>
+            </button>
             <button onClick={goBack} className="w-full py-1 text-xs text-txt-secondary hover:text-txt-primary">← Change partner type</button>
           </div>
           <div className="px-6 py-3 bg-slate-50 border-t border-bdr-light text-xs text-txt-tertiary text-center">

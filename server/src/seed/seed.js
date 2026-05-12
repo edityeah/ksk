@@ -129,13 +129,15 @@ async function main() {
 
   // SSC admin
   const sscUser = await prisma.user.create({
-    data: { role: 'ssc', name: 'Rohit Bhandari (RASCI Admin)', phone: '9000000004', language: 'en' },
+    data: { role: 'ssc', name: 'Rohit Bhandari (RASCI Admin)', phone: '9000000004', language: 'en',
+            sidhId: 'SSC-RASCI-001', passwordHash: pwHash },
   })
   await prisma.ssc.update({ where: { id: rasciSsc.id }, data: { adminId: sscUser.id } })
 
   // Training Partner — Magic Bus
   const tpAdminUser = await prisma.user.create({
-    data: { role: 'training_partner', name: 'Priya Kohli (Magic Bus HQ)', phone: '9000000002' },
+    data: { role: 'training_partner', name: 'Priya Kohli (Magic Bus HQ)', phone: '9000000002',
+            sidhId: 'TP-MB-001', passwordHash: pwHash },
   })
   const tp = await prisma.trainingPartner.create({
     data: { code: 'TP2024MB001', name: 'Magic Bus India Foundation', type: 'NGO', accreditationState: 'accredited',
@@ -155,7 +157,8 @@ async function main() {
 
   // Training Centres
   const tcAdmin = await prisma.user.create({
-    data: { role: 'training_centre', name: 'Sunita Devi (Patna Centre)', phone: '9000000001' },
+    data: { role: 'training_centre', name: 'Sunita Devi (Patna Centre)', phone: '9000000001',
+            sidhId: 'TC-PAT-001', passwordHash: pwHash },
   })
   const tcPatna = await prisma.trainingCentre.create({
     data: { code: 'TC10012001', name: 'Magic Bus Patna Centre', addressLine: 'Boring Road', city: 'Patna', state: 'BR', pincode: '800001',
@@ -180,7 +183,8 @@ async function main() {
 
   // Employer
   const employerUser = await prisma.user.create({
-    data: { role: 'employer', name: 'Reliance Retail HR (Patna)', phone: '9000000005' },
+    data: { role: 'employer', name: 'Reliance Retail HR (Patna)', phone: '9000000005',
+            sidhId: 'EST-RR-PAT-001', passwordHash: pwHash },
   })
   const employer = await prisma.employer.create({
     data: { code: 'EMP-RR-PAT-001', name: 'Reliance Retail — Patna Store Cluster', type: 'formal',
@@ -203,12 +207,14 @@ async function main() {
   // Assessor
   const assessorUser = await prisma.user.create({
     data: { role: 'assessor', name: 'Lakshmi Ramaswamy (RASCI Assessor)', phone: '9000000003',
+            sidhId: 'ASR-RAS-001', passwordHash: pwHash,
             profile: JSON.stringify({ sscId: rasciSsc.id, sectorIds: [sectorByCode['RAS'].id] }) },
   })
 
   // NSDC Officer
   const nsdcUser = await prisma.user.create({
-    data: { role: 'nsdc_officer', name: 'Vrinda Sharma (NSDC Outcomes Cell)', phone: '9000000006' },
+    data: { role: 'nsdc_officer', name: 'Vrinda Sharma (NSDC Outcomes Cell)', phone: '9000000006',
+            sidhId: 'NSDC-001', passwordHash: pwHash },
   })
 
   // Funder
@@ -275,7 +281,8 @@ async function main() {
   console.log('[seed] trainees…')
   // Hero trainee (Rani — phone OTP)
   const raniUser = await prisma.user.create({
-    data: { role: 'trainee', name: 'Rani Kumari', phone: '9876543210', aadhaar: '123456789012', language: 'hi' },
+    data: { role: 'trainee', name: 'Rani Kumari', phone: '9876543210', aadhaar: '123456789012', language: 'hi',
+            sidhId: 'LRN-RANI-001', passwordHash: pwHash },
   })
   const rani = await prisma.trainee.create({
     data: { userId: raniUser.id, name: 'Rani Kumari', aadhaar: '123456789012', phone: '9876543210',
