@@ -28,19 +28,26 @@ import accreditationRoutes from './routes/accreditation.js'
 
 const app = express()
 
+// Trust the Render / Cloudflare proxy so req.ip reflects the real client,
+// not the proxy node. Required for express-rate-limit to dedupe correctly
+// per visitor instead of bucketing every request to the same IP.
+app.set('trust proxy', 1)
+
 app.use(express.json({ limit: '5mb' }))
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173', credentials: true }))
 
-// global rate limit (lenient — per-IP)
+// Health check — defined BEFORE the rate-limit middleware so Render's internal
+// probes never get throttled. Returning fast keeps the service marked healthy.
+app.get('/api/health', (req, res) => res.json({ ok: true, ts: Date.now() }))
+
+// Global rate limit (per real client IP). Skips /api/health and other probes.
 app.use(rateLimit({
   windowMs: 60 * 60 * 1000,
-  limit: 600,
+  limit: 1200,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  skip: (req) => req.path === '/api/health' || req.path === '/api',
 }))
-
-// health
-app.get('/api/health', (req, res) => res.json({ ok: true, ts: Date.now() }))
 
 // public
 app.use('/api/auth', authRoutes)
