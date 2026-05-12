@@ -13,13 +13,7 @@ export default function SidhAccountTypePage() {
 
   function pickLearner() {
     sessionStorage.setItem('ksk.sidhPartnerType', 'learner')
-    sessionStorage.setItem('ksk.sidhPartnerLabel', 'Learner')
-    sessionStorage.setItem('ksk.sidhRoleMap', 'trainee')
-    navigate('sidh_redirect')
-  }
-  function pickParticipant() {
-    sessionStorage.setItem('ksk.sidhPartnerType', 'participant')
-    sessionStorage.setItem('ksk.sidhPartnerLabel', 'Participant')
+    sessionStorage.setItem('ksk.sidhPartnerLabel', 'Learner / Participant')
     sessionStorage.setItem('ksk.sidhRoleMap', 'trainee')
     navigate('sidh_redirect')
   }
@@ -62,35 +56,28 @@ export default function SidhAccountTypePage() {
         </p>
       </div>
 
-      {/* Four cards */}
+      {/* Three cards */}
       <div className="flex-1 max-w-6xl w-full mx-auto px-6 pb-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card
             hover={hover === 'learner'} onHover={() => setHover('learner')} onLeave={() => setHover(null)}
             onClick={pickLearner}
-            title="Learner"
-            desc="Discover skilling courses, find Skill Centres, build your Skill Passport."
+            title="Learner / Participant"
+            desc="Discover skilling courses, enrol in schemes (PMKVY, NAPS, DDU-GKY), build a verified Skill Passport, get placed and tracked through retention."
             illustration={<LearnerIllustration />}
-          />
-          <Card
-            hover={hover === 'participant'} onHover={() => setHover('participant')} onLeave={() => setHover(null)}
-            onClick={pickParticipant}
-            title="Participant"
-            desc="Currently enrolled in a scheme — PMKVY, NAPS, DDU-GKY — track progress, certifications, placement and retention."
-            illustration={<ParticipantIllustration />}
           />
           <Card
             hover={hover === 'partner'} onHover={() => setHover('partner')} onLeave={() => setHover(null)}
             onClick={pickPartner}
             title="Partner"
-            desc="Training Partner, Training Centre, Trainer, Assessor, Assessment Agency, Awarding Body, Establishment and more."
+            desc="Training Partner, Training Centre, Trainer, Mentor, Assessor, Assessment Agency, Awarding Body, BTP, Institutional Partner, Establishment and more."
             illustration={<PartnerIllustration />}
           />
           <Card
             hover={hover === 'admin'} onHover={() => setHover('admin')} onLeave={() => setHover(null)}
             onClick={pickAdmin}
             title="Admin"
-            desc="NSDC, Scheme, Sector Skills Council, India Skills, RDSDE, PMU — govern and administer the skilling ecosystem."
+            desc="NSDC Admin, Scheme Admin, Sector Skills Council, India Skills Admin, RDSDE, PMU — govern and administer the skilling ecosystem."
             illustration={<AdminIllustration />}
           />
         </div>
@@ -139,20 +126,6 @@ function LearnerIllustration() {
       <rect x="32" y="56" width="36" height="26" rx="4" fill="#FF9933" />
       <rect x="22" y="60" width="22" height="14" rx="2" fill="#0A2540" />
       <rect x="24" y="62" width="18" height="10" fill="#5B89FF" />
-    </svg>
-  )
-}
-function ParticipantIllustration() {
-  return (
-    <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="48" fill="#FEF3C7" />
-      <circle cx="50" cy="36" r="11" fill="#FFD7B3" />
-      <path d="M35 36 a15 15 0 0 1 30 0 v-3 a15 15 0 0 0 -30 0z" fill="#D97706" />
-      <rect x="32" y="52" width="36" height="30" rx="4" fill="#386AF6" />
-      <circle cx="50" cy="68" r="6" fill="#fff" />
-      <text x="50" y="71" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#386AF6">★</text>
-      <circle cx="74" cy="28" r="9" fill="#FF9933" />
-      <text x="74" y="32" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#fff">₹</text>
     </svg>
   )
 }
