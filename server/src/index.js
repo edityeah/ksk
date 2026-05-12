@@ -23,6 +23,7 @@ import stipendRoutes from './routes/stipends.js'
 import notificationRoutes from './routes/notifications.js'
 import chatRoutes from './routes/chats.js'
 import aiRoutes from './routes/ai.js'
+import avatarRoutes from './routes/avatar.js'
 import dashboardRoutes from './routes/dashboards.js'
 import accreditationRoutes from './routes/accreditation.js'
 
@@ -68,6 +69,7 @@ app.use('/api/stipends', stipendRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/chats', chatRoutes)
 app.use('/api/ai', aiRoutes)
+app.use('/api/avatar', avatarRoutes)
 app.use('/api/dashboards', dashboardRoutes)
 app.use('/api/accreditation', accreditationRoutes)
 

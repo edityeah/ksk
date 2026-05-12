@@ -36,6 +36,14 @@ services:
         value: "50"
       - key: ALLOWED_ORIGIN
         value: "*"                  # served from same origin, but keep permissive
+      - key: ANAM_API_KEY
+        sync: false                 # set in dashboard — separate from OpenAI key
+      - key: ANAM_AVATAR_ID
+        sync: false                 # leave blank to use Mia stock avatar
+      - key: ANAM_VOICE_ID
+        sync: false                 # leave blank to use Lauren stock voice
+      - key: ZEP_API_KEY
+        sync: false                 # set in dashboard — Zep Cloud memory
       - key: DATABASE_URL
         fromDatabase:
           name: ksk-db
