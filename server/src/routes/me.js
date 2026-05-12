@@ -15,7 +15,14 @@ r.get('/', async (req, res, next) => {
     if (role === 'trainee') {
       const t = await prisma.trainee.findUnique({
         where: { userId: req.user.id },
-        include: { batch: { include: { centre: true, track: true, trainer: true, scheme: true } } },
+        include: {
+          batch: { include: { centre: true, track: { include: { jobRoles: { include: { jobRole: true } } } }, trainer: true, scheme: true } },
+          certificates: { include: { jobRole: { include: { sector: true } } }, orderBy: { issuedAt: 'desc' } },
+          placements: { include: { employer: true, retentionCheckins: true, salarySlips: { orderBy: { month: 'desc' }, take: 6 } }, orderBy: { joiningDate: 'desc' } },
+          assessments: { include: { jobRole: true }, orderBy: { scheduledAt: 'desc' } },
+          stipends: { include: { scheme: true }, orderBy: { month: 'desc' }, take: 6 },
+          retentionCheckins: { orderBy: { milestone: 'asc' } },
+        },
       })
       extra = { trainee: t }
     } else if (role === 'training_centre') {
