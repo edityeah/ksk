@@ -16,6 +16,20 @@ const SKILL_LEVEL = (months) => {
 }
 const yrs = (months) => Math.max(0, Math.round(months / 12))
 
+// Display: "5y", "9m", "Just started"
+function fmtExperience(months) {
+  if (!months || months < 1) return '—'
+  if (months < 12) return `${months}m`
+  return `${Math.round(months / 12)}y`
+}
+// Display for skill row subtitle
+function fmtExperienceLong(months) {
+  if (!months || months < 1) return 'Just started'
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} experience`
+  const y = Math.round(months / 12)
+  return `${y} yr${y === 1 ? '' : 's'} experience`
+}
+
 export default function SkillPassportCanvas() {
   const { showToast } = useApp()
   const [me, setMe] = useState(null)
@@ -74,52 +88,44 @@ export default function SkillPassportCanvas() {
     : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
 
   return (
-    <div className="flex flex-col" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      {/* ── Blue hero band ── */}
-      <div className="bg-primary text-white px-5 pt-5 pb-24 relative">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <div className="text-[20px] font-bold leading-tight">Skill Passport</div>
-            <div className="text-[12px] opacity-80">Updated {updatedDate}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <IconBtn icon={<Pencil className="w-4 h-4" />} title="Edit"     onClick={() => showToast({ kind: 'info', text: 'Edit mode opens here' })} />
-            <IconBtn icon={<Share2 className="w-4 h-4" />} title="Share"    onClick={() => showToast({ kind: 'success', text: 'Share link copied' })} />
-            <IconBtn icon={<Download className="w-4 h-4" />} title="Download" onClick={() => showToast({ kind: 'success', text: 'Pushed to DigiLocker' })} />
-          </div>
+    <div style={{ fontFamily: 'Montserrat, sans-serif' }}>
+      {/* ── Blue hero band — kept short so the white card sits visibly inside ── */}
+      <div className="bg-primary px-5 pt-4 pb-12 relative">
+        <div className="flex items-center justify-end gap-2">
+          <IconBtn icon={<Pencil className="w-4 h-4" />}   title="Edit"     onClick={() => showToast({ kind: 'info',    text: 'Edit mode opens here' })} />
+          <IconBtn icon={<Share2 className="w-4 h-4" />}   title="Share"    onClick={() => showToast({ kind: 'success', text: 'Share link copied'    })} />
+          <IconBtn icon={<Download className="w-4 h-4" />} title="DigiLocker" onClick={() => showToast({ kind: 'success', text: 'Pushed to DigiLocker' })} />
         </div>
       </div>
 
-      {/* ── Identity card (overlaps the blue band) ── */}
-      <div className="px-4 -mt-20">
+      {/* ── Identity card overlapping the blue band ── */}
+      <div className="px-4 -mt-8 relative z-10">
         <div className="rounded-2xl bg-white shadow-card border border-bdr-light p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="text-[10px] font-bold uppercase tracking-[2px] text-txt-secondary">Kaushal Samiksha Skill Passport</div>
-              <div className="text-[24px] font-bold text-txt-primary mt-1 leading-tight truncate">{t.name}</div>
+              <div className="text-[24px] font-bold text-txt-primary mt-1 leading-tight">{t.name}</div>
               <div className="text-[12px] text-txt-secondary mt-1">
                 ID: <span className="font-mono font-semibold">{passportId}</span> · Issued {issuedYear}
               </div>
+              <div className="text-[11px] text-txt-tertiary mt-0.5">Updated {updatedDate}</div>
             </div>
-            <div className="w-16 h-16 rounded-xl border-2 border-primary-light flex items-center justify-center flex-shrink-0">
+            <div className="w-16 h-16 rounded-xl bg-primary-light flex items-center justify-center flex-shrink-0">
               <QrCode className="w-9 h-9 text-primary" />
             </div>
           </div>
 
-          {/* KPIs */}
-          <div className="grid grid-cols-4 gap-2 mt-5 pt-4 border-t border-bdr-light">
+          <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-bdr-light">
             <Kpi value={skills.length} label="Skills" />
             <Kpi value={certs.length} label="Certificates" />
-            <Kpi value={`${yrs(totalExperienceMonths)}y`} label="Experience" />
+            <Kpi value={fmtExperience(totalExperienceMonths)} label="Experience" />
             <Kpi value={`${readiness}%`} label="Readiness" />
           </div>
 
-          {/* Readiness bar */}
           <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full bg-ok" style={{ width: `${readiness}%` }} />
+            <div className="h-full bg-ok transition-all" style={{ width: `${readiness}%` }} />
           </div>
 
-          {/* Verification pills */}
           <div className="flex flex-wrap gap-2 mt-3">
             <VerPill icon={<ShieldCheck className="w-3 h-3" />} text="Aadhaar verified" tone="ok" />
             <VerPill icon={<BadgeCheck  className="w-3 h-3" />} text="NSDC linked"      tone="ok" />
@@ -141,7 +147,7 @@ export default function SkillPassportCanvas() {
               icon={<Star className="w-4 h-4" />}
               iconTone={s.certified ? 'sky' : 'amber'}
               title={s.name}
-              subtitle={`${s.beginner ? 'In training' : SKILL_LEVEL(s.monthsExperience)} · ${yrs(s.monthsExperience)} yr${yrs(s.monthsExperience) === 1 ? '' : 's'} experience`}
+              subtitle={s.beginner ? 'In training · No work experience yet' : `${SKILL_LEVEL(s.monthsExperience)} · ${fmtExperienceLong(s.monthsExperience)}`}
               badge={s.certified ? <Pill tone="ok">Verified</Pill> : <Pill tone="warn">Pending</Pill>}
             />
           ))}
