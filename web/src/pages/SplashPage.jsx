@@ -1,4 +1,5 @@
-// KSK Splash — the language picker. Fits in one viewport, no scrolling.
+// KSK Splash — language picker. Everything stacks tightly from the top with
+// minimal whitespace; PoweredBy logos sit at the bottom. No scroll.
 
 import { useState } from 'react'
 import { Check } from 'lucide-react'
@@ -28,17 +29,21 @@ export default function SplashPage() {
 
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      <div className="w-full max-w-[480px] mx-auto flex flex-col h-full px-6 py-3">
+      <div className="w-full max-w-[480px] mx-auto h-full flex flex-col px-5 py-3">
 
-        {/* Top: mascot + heading (compact) */}
-        <div className="flex flex-col items-center text-center w-full flex-shrink-0">
-          <Mascot size={200} className="-mb-2" />
+        {/* Mascot */}
+        <div className="flex justify-center flex-shrink-0">
+          <Mascot size={180} />
+        </div>
+
+        {/* Heading — sits immediately below mascot */}
+        <div className="text-center flex-shrink-0 -mt-2">
           <h1 className="text-[22px] font-bold text-txt-primary leading-tight">Choose your language</h1>
           <p className="text-[12px] text-txt-secondary mt-0.5">You can change this anytime from the Settings.</p>
         </div>
 
-        {/* Language grid — fills the middle, no scroll */}
-        <div className="grid grid-cols-2 gap-2 w-full max-w-[400px] mx-auto mt-3 flex-1 content-center">
+        {/* Language grid — natural height, immediately below heading */}
+        <div className="grid grid-cols-2 gap-2 w-full max-w-[400px] mx-auto mt-4 flex-shrink-0">
           {LANGS.map(l => {
             const active = selected === l.code
             return (
@@ -65,13 +70,15 @@ export default function SplashPage() {
           })}
         </div>
 
-        {/* Continue + footer logos */}
-        <div className="w-full max-w-[400px] mx-auto flex flex-col items-center gap-3 flex-shrink-0 pt-3 pb-2">
-          <button
-            onClick={handleContinue}
-            className="w-full bg-primary text-white font-bold text-[15px] py-3 rounded-pill shadow-modal active:opacity-80 transition-opacity">
-            Continue
-          </button>
+        {/* Continue — right under the grid */}
+        <button
+          onClick={handleContinue}
+          className="w-full max-w-[400px] mx-auto mt-4 bg-primary text-white font-bold text-[15px] py-3 rounded-pill shadow-modal active:opacity-80 transition-opacity flex-shrink-0">
+          Continue
+        </button>
+
+        {/* PoweredBy — bottom of fold */}
+        <div className="mt-auto flex justify-center pt-3 flex-shrink-0">
           <PoweredBy size={20} />
         </div>
       </div>
