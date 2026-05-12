@@ -6,27 +6,12 @@
   "description": "KSK — Kaushal Samiksha Kendra on SwiftChat (NSDC skilling M&E command centre)",
   "scripts": {
     "build": "cd web && npm run build",
-    "vercel-build": "cd server && npx prisma generate && cd ../web && npm run build",
-    "postinstall": "cd server && npx prisma generate || true",
+    "start": "cd server && node src/index.js",
     "dev:web": "cd web && npm run dev",
     "dev:server": "cd server && npm run dev",
     "db:push": "cd server && npm run db:push",
     "db:seed": "cd server && npm run db:seed",
     "rag:ingest": "cd server && npm run rag:ingest"
-  },
-  "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "express-rate-limit": "^7.4.1",
-    "jsonwebtoken": "^9.0.2",
-    "openai": "^4.71.1",
-    "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "prisma": "^5.22.0"
   },
   "engines": {
     "node": ">=20"

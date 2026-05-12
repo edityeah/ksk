@@ -1,0 +1,48 @@
+# Render Blueprint — provisions everything for KSK in one click.
+# Usage:
+#   1. Render → New + → Blueprint → connect github.com/edityeah/ksk
+#   2. Render reads this file and creates the web service + Postgres + env vars
+#   3. Set OPENAI_API_KEY in the dashboard (it's marked sync:false below)
+#   4. After first deploy: open Render shell, run db:push + db:seed once
+
+services:
+  - type: web
+    name: ksk
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: true
+    buildCommand: |
+      npm install
+      cd web && npm install && npm run build
+      cd ../server && npm install && npx prisma generate
+    startCommand: cd server && npx prisma db push --accept-data-loss --skip-generate && node src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false                 # must be set in dashboard
+      - key: OPENAI_CHAT_MODEL
+        value: gpt-4o
+      - key: OPENAI_EMBED_MODEL
+        value: text-embedding-3-small
+      - key: RATE_LIMIT_PER_HOUR
+        value: "50"
+      - key: ALLOWED_ORIGIN
+        value: "*"                  # served from same origin, but keep permissive
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ksk-db
+          property: connectionString
+
+databases:
+  - name: ksk-db
+    plan: free
+    databaseName: ksk
+    user: ksk
+    region: singapore
+    postgresMajorVersion: 16

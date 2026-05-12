@@ -10,63 +10,54 @@ National skilling Monitoring & Evaluation command centre on SwiftChat. Forked fr
 
 ```
 ksk/
-├── web/         # Vite + React 18 + Tailwind frontend (SwiftChat fork)
-├── server/      # Node + Express + Prisma + Postgres backend + OpenAI integration
-├── api/         # Vercel serverless entry — wraps the Express app
-├── docs/        # design docs, specs, knowledge base seeds for RAG
-└── vercel.json  # Vercel deploy config
+├── web/          # Vite + React 18 + Tailwind frontend (SwiftChat fork)
+├── server/       # Node + Express + Prisma + Postgres backend + OpenAI integration
+├── docs/         # design docs, specs, knowledge base seeds for RAG
+└── render.yaml   # Render Blueprint — provisions everything in one click
 ```
 
-## Deploy to Vercel
+## Deploy to Render (single service, one click)
 
-The entire app — frontend SPA + serverless API — runs on a single Vercel project.
+One Render web service runs everything. The Express server serves `/api/*` AND the
+built Vite SPA from `/` in production. Postgres is provisioned alongside via the
+Blueprint.
 
-### 1. Provision a Postgres database
+### 1. Push to GitHub (already done)
 
-The cheapest path is **[Neon](https://neon.tech)** (free tier, instant, includes pgvector):
+Repo: [edityeah/ksk](https://github.com/edityeah/ksk).
 
-```text
-1. Sign up at neon.tech → New Project → name "ksk"
-2. Copy the connection string (Pooled connection recommended for serverless)
-```
+### 2. Create the Render Blueprint
 
-You'll get a URL like:
-`postgresql://USER:PASSWORD@ep-xyz-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require`
+1. Sign in to [render.com](https://render.com) (free tier is enough).
+2. **New +** → **Blueprint** → connect your GitHub → pick `edityeah/ksk`.
+3. Render reads `render.yaml` and shows: one web service (`ksk`) + one Postgres database (`ksk-db`).
+4. Click **Apply**. Render provisions both, auto-wires `DATABASE_URL`, and starts the first build.
 
-### 2. Connect the GitHub repo to Vercel
+Build takes ~5 minutes (npm install + Vite build + Prisma generate).
 
-```text
-1. vercel.com → Add New Project → import edityeah/ksk
-2. Framework Preset: Other (Vercel auto-detects vercel.json)
-3. Root Directory: .  (project root)
-```
+### 3. Set OPENAI_API_KEY
 
-### 3. Environment variables (Vercel dashboard → Settings → Environment Variables)
+The Blueprint marks `OPENAI_API_KEY` as `sync: false`, so add it manually:
 
-| Key | Value |
-|---|---|
-| `DATABASE_URL` | the Neon Pooled connection string |
-| `JWT_SECRET` | any long random string (e.g. `openssl rand -hex 32`) |
-| `OPENAI_API_KEY` | your real OpenAI key (must be valid) |
-| `OPENAI_CHAT_MODEL` | `gpt-4o` |
-| `OPENAI_EMBED_MODEL` | `text-embedding-3-small` |
-| `RATE_LIMIT_PER_HOUR` | `50` |
+1. Render dashboard → `ksk` service → **Environment** → **Add Environment Variable**
+2. Key `OPENAI_API_KEY` · Value your real `sk-…` key
+3. **Save Changes** — Render rebuilds.
 
-### 4. Deploy + run the migrations once
+### 4. Seed the database once
 
-After the first deploy succeeds, open a one-off shell (`vercel env pull` locally, then):
+After the first successful deploy, the schema is already pushed (the start command runs `prisma db push`). Now seed demo data — open Render's **Shell** tab on the `ksk` service:
 
 ```bash
 cd server
-npm install
-npx prisma db push           # creates all tables in Neon
-npm run db:seed              # seeds 10 demo users + scenario data
+npm run db:seed              # seeds 90 demo users + scenario data
 npm run rag:ingest           # optional: embed the markdown knowledge base
 ```
 
-(Or just run `prisma db push` + seed against the same DATABASE_URL from your laptop — Neon accepts external connections.)
+### 5. Open the URL
 
-Subsequent commits to `main` will auto-deploy.
+Render gives you `https://ksk.onrender.com` (or similar). Splash → language → login → home should all work. Demo accounts: see [`docs/demo-credentials.md`](./docs/demo-credentials.md).
+
+**Free-tier caveats:** Render's free web service spins down after 15 min idle (~60 s cold start on next hit). Free Postgres is 1 GB and expires after 30 days. For a real funder demo, upgrade the web service to **Starter ($7/mo)** so it stays warm, and either keep paying for Postgres or migrate to free [Neon](https://neon.tech) (no expiration). Just swap `DATABASE_URL` in Render's env vars and `prisma db push` again.
 
 ## Quick start
 

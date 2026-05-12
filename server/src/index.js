@@ -2,6 +2,10 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 import authRoutes from './routes/auth.js'
 import meRoutes from './routes/me.js'
@@ -60,18 +64,25 @@ app.use('/api/ai', aiRoutes)
 app.use('/api/dashboards', dashboardRoutes)
 app.use('/api/accreditation', accreditationRoutes)
 
+// ─── Production: also serve the built Vite SPA from /web/dist ────────────────
+// In production (Render), the same Express service hosts both /api/* and the
+// React frontend. In dev, Vite proxies /api → :8787 so we don't serve static
+// files (Vite handles them).
+if (process.env.NODE_ENV === 'production') {
+  const webDist = path.resolve(__dirname, '../../web/dist')
+  app.use(express.static(webDist, { maxAge: '1h', index: false }))
+  // SPA fallback — every non-/api/* path returns index.html so client-side routing works.
+  app.get(/^\/(?!api(\/|$)).*/, (req, res) => {
+    res.sendFile(path.join(webDist, 'index.html'))
+  })
+}
+
 app.use((err, req, res, next) => {
   console.error('[err]', err)
   res.status(err.status || 500).json({ error: err.message || 'internal_error', code: err.code })
 })
 
-// Export the Express app so a serverless handler (Vercel) can mount it directly.
-// Only call listen() when running standalone (npm run dev) — never inside Vercel.
-export default app
-
-if (!process.env.VERCEL) {
-  const port = Number(process.env.PORT || 8787)
-  app.listen(port, () => {
-    console.log(`[ksk] server on http://localhost:${port}`)
-  })
-}
+const port = Number(process.env.PORT || 8787)
+app.listen(port, () => {
+  console.log(`[ksk] server on http://localhost:${port}  (NODE_ENV=${process.env.NODE_ENV || 'development'})`)
+})
