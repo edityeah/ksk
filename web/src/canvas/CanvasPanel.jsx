@@ -14,7 +14,7 @@
 // area is `relative`, so the overlay sits inside the main area, NOT over the
 // sidebar.
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { X, ArrowLeft, Maximize2, Minimize2 } from 'lucide-react'
 import { moduleFor, getCanvasMeta } from './modules/index.js'
@@ -24,18 +24,15 @@ export default function CanvasPanel() {
   const { canvas, closeCanvas } = useApp()
   const [expanded, setExpanded] = useState(false)
   const [headerActions, setHeaderActions] = useState(null)
-  // Track the current canvas type so we only RESET on a real type change,
-  // not on the initial mount. Mount-time reset is what was wiping the call
-  // buttons: AvatarCall's effect ran first → setActions(<icons>) → state
-  // queued; CanvasPanel's effect ran second → setHeaderActions(null) → state
-  // queued; last write won, icons disappeared. Now we skip the very first run.
-  const prevTypeRef = useRef(canvas?.type)
-  useEffect(() => {
-    if (prevTypeRef.current === canvas?.type) return  // initial mount or same canvas
-    prevTypeRef.current = canvas?.type
-    setHeaderActions(null)
-    setExpanded(false)
-  }, [canvas?.type])
+  // No reset effect for headerActions — when the canvas TYPE changes, React
+  // unmounts the old Module which fires AvatarCall's effect cleanup
+  // (setActions(null)), then mounts the new Module whose effect fires
+  // setActions(<new icons>). The natural lifecycle handles it correctly.
+  //
+  // The previous reset effect ran AFTER AvatarCall's effect (effects commit
+  // child-first), so it overwrote the icons with null on every canvas open —
+  // which is why the Phone / Video buttons never appeared in the header.
+  // Collapse-on-type-change is handled via the key on the wrapper below.
 
   if (!canvas) return null
   const meta = getCanvasMeta(canvas.type)
