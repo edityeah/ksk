@@ -85,9 +85,25 @@ app.use('/api/accreditation', accreditationRoutes)
 // files (Vite handles them).
 if (process.env.NODE_ENV === 'production') {
   const webDist = path.resolve(__dirname, '../../web/dist')
-  app.use(express.static(webDist, { maxAge: '1h', index: false }))
-  // SPA fallback — every non-/api/* path returns index.html so client-side routing works.
+  // Vite content-hashes every asset filename (e.g. index-DhfxyqJe.js) so /assets/*
+  // is safe to cache forever — when the contents change, the filename changes.
+  // index.html itself MUST NOT cache, otherwise browsers keep loading the old
+  // file and old asset references after a deploy (this is what hid the call-
+  // button fix from the user for two cycles).
+  app.use('/assets', express.static(path.join(webDist, 'assets'), {
+    maxAge: '1y',
+    immutable: true,
+  }))
+  app.use(express.static(webDist, {
+    index: false,
+    setHeaders: (res, file) => {
+      if (file.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      }
+    },
+  }))
   app.get(/^\/(?!api(\/|$)).*/, (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
     res.sendFile(path.join(webDist, 'index.html'))
   })
 }
