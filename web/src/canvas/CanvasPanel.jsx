@@ -14,7 +14,7 @@
 // area is `relative`, so the overlay sits inside the main area, NOT over the
 // sidebar.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { X, ArrowLeft, Maximize2, Minimize2 } from 'lucide-react'
 import { moduleFor, getCanvasMeta } from './modules/index.js'
@@ -24,10 +24,15 @@ export default function CanvasPanel() {
   const { canvas, closeCanvas } = useApp()
   const [expanded, setExpanded] = useState(false)
   const [headerActions, setHeaderActions] = useState(null)
-
-  // Whenever the canvas changes (different module), reset header actions and
-  // collapse back to overlay.
+  // Track the current canvas type so we only RESET on a real type change,
+  // not on the initial mount. Mount-time reset is what was wiping the call
+  // buttons: AvatarCall's effect ran first → setActions(<icons>) → state
+  // queued; CanvasPanel's effect ran second → setHeaderActions(null) → state
+  // queued; last write won, icons disappeared. Now we skip the very first run.
+  const prevTypeRef = useRef(canvas?.type)
   useEffect(() => {
+    if (prevTypeRef.current === canvas?.type) return  // initial mount or same canvas
+    prevTypeRef.current = canvas?.type
     setHeaderActions(null)
     setExpanded(false)
   }, [canvas?.type])

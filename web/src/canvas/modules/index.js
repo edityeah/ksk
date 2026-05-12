@@ -80,6 +80,10 @@ const META = {
   course_discovery:     { title: 'Discover Courses', subtitle: 'Apply in one tap', icon: '🧭' },
   jobs_marketplace:     { title: 'Jobs', subtitle: 'Open openings near you', icon: '💼' },
   notifications:        { title: 'Notifications', subtitle: 'Reminders & broadcasts', icon: '🔔' },
+  career_counsellor:    { title: 'Career Counsellor', subtitle: 'Karuna · AI career guide', icon: '🎯' },
+  mock_interview:       { title: 'Mock Interview',     subtitle: 'Sharma ji · interview coach', icon: '🎙' },
+  learning_assistant:   { title: 'Learning Assistant', subtitle: 'Guru ji · AI tutor', icon: '📚' },
+  swifty_assistant:     { title: 'Swifty Assistant',   subtitle: 'KSK navigation + Q&A', icon: '✨' },
 }
 
 export function getCanvasMeta(type) {
