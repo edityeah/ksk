@@ -22,16 +22,13 @@ export default function SkillPassportCanvas() {
   const [loading, setLoading] = useState(true)
   useEffect(() => { api.me().then(setMe).finally(() => setLoading(false)) }, [])
 
-  if (loading) return <Loading />
+  // ── All hooks MUST run before any conditional return ─────────────────────
   const t = me?.trainee
-  if (!t) return <Empty />
-
-  const certs = t.certificates || []
-  const placements = t.placements || []
-  const batchTrack = t.batch?.track
+  const certs = t?.certificates || []
+  const placements = t?.placements || []
+  const batchTrack = t?.batch?.track
   const jobRoles = batchTrack?.jobRoles?.map(jr => jr.jobRole) || []
 
-  // ── Build the SKILLS list from certified job roles + placement roles ──
   const skills = useMemo(() => {
     const map = new Map()
     for (const c of certs) {
@@ -48,12 +45,14 @@ export default function SkillPassportCanvas() {
       map.get(name).monthsExperience += months
       map.get(name).sourceCount++
     }
-    // Add job-role-from-batch as Beginner if no other source
     for (const jr of jobRoles) {
       if (!map.has(jr.name)) map.set(jr.name, { name: jr.name, monthsExperience: 0, sourceCount: 0, certified: false, beginner: true })
     }
     return Array.from(map.values())
   }, [certs.length, placements.length, jobRoles.length])
+
+  if (loading) return <Loading />
+  if (!t) return <Empty />
 
   // ── KPI summary ──
   const totalExperienceMonths = placements.reduce((acc, p) => {
