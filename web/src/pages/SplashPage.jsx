@@ -1,5 +1,5 @@
-// KSK Splash — language picker. Everything stacks tightly from the top with
-// minimal whitespace; PoweredBy logos sit at the bottom. No scroll.
+// KSK Splash — language picker. Space distributed evenly across the viewport,
+// no scroll, no clustering.
 
 import { useState } from 'react'
 import { Check } from 'lucide-react'
@@ -29,28 +29,28 @@ export default function SplashPage() {
 
   return (
     <div className="h-screen flex flex-col bg-white overflow-hidden" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      <div className="w-full max-w-[480px] mx-auto h-full flex flex-col px-5 py-3">
+      <div className="w-full max-w-[480px] mx-auto h-full flex flex-col justify-evenly px-5 py-4">
 
         {/* Mascot */}
         <div className="flex justify-center flex-shrink-0">
-          <Mascot size={220} />
+          <Mascot size={260} />
         </div>
 
-        {/* Heading — sits immediately below mascot */}
-        <div className="text-center flex-shrink-0 -mt-2">
-          <h1 className="text-[22px] font-bold text-txt-primary leading-tight">Choose your language</h1>
-          <p className="text-[12px] text-txt-secondary mt-0.5">You can change this anytime from the Settings.</p>
+        {/* Heading */}
+        <div className="text-center flex-shrink-0">
+          <h1 className="text-[24px] font-bold text-txt-primary leading-tight">Choose your language</h1>
+          <p className="text-[13px] text-txt-secondary mt-1">You can change this anytime from the Settings.</p>
         </div>
 
-        {/* Language grid — natural height, immediately below heading */}
-        <div className="grid grid-cols-2 gap-2 w-full max-w-[400px] mx-auto mt-4 flex-shrink-0">
+        {/* Language grid */}
+        <div className="grid grid-cols-2 gap-2.5 w-full max-w-[400px] mx-auto flex-shrink-0">
           {LANGS.map(l => {
             const active = selected === l.code
             return (
               <button
                 key={l.code}
                 onClick={() => setSelected(l.code)}
-                className={`relative flex flex-col items-center justify-center rounded-xl border-2 py-2.5 px-2 transition-all active:scale-[0.97] ${
+                className={`relative flex flex-col items-center justify-center rounded-xl border-2 py-3 px-2 transition-all active:scale-[0.97] ${
                   active ? 'bg-ok-light border-ok' : 'bg-white border-bdr hover:border-primary'
                 }`}
               >
@@ -59,7 +59,7 @@ export default function SplashPage() {
                     <Check size={10} color="#fff" strokeWidth={3} />
                   </span>
                 )}
-                <span className={`text-[15px] font-bold leading-tight ${active ? 'text-ok' : 'text-txt-primary'}`} style={{ fontFamily: 'Noto Sans, sans-serif' }}>
+                <span className={`text-[16px] font-bold leading-tight ${active ? 'text-ok' : 'text-txt-primary'}`} style={{ fontFamily: 'Noto Sans, sans-serif' }}>
                   {l.native}
                 </span>
                 {l.code !== 'en' && (
@@ -70,15 +70,13 @@ export default function SplashPage() {
           })}
         </div>
 
-        {/* Continue — right under the grid */}
-        <button
-          onClick={handleContinue}
-          className="w-full max-w-[400px] mx-auto mt-4 bg-primary text-white font-bold text-[15px] py-3 rounded-pill shadow-modal active:opacity-80 transition-opacity flex-shrink-0">
-          Continue
-        </button>
-
-        {/* PoweredBy — sits right below Continue */}
-        <div className="flex justify-center mt-3 flex-shrink-0">
+        {/* Continue + logos — single tight cluster */}
+        <div className="w-full max-w-[400px] mx-auto flex flex-col items-center gap-3 flex-shrink-0">
+          <button
+            onClick={handleContinue}
+            className="w-full bg-primary text-white font-bold text-[16px] py-3.5 rounded-pill shadow-modal active:opacity-80 transition-opacity">
+            Continue
+          </button>
           <PoweredBy size={28} />
         </div>
       </div>
