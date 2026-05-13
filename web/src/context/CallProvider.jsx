@@ -188,14 +188,36 @@ export function CallProvider({ children }) {
   }, [activeCall])
 
   // ── Screen share ─────────────────────────────────────────────────────────
+  // Strong system message sent the moment screen share starts. This OVERRIDES
+  // the default "I'm a voice-only assistant" stance the model otherwise takes.
+  // Without it, the model receives screen descriptions but still answers "I
+  // can't see your screen" because nothing told it that it can.
+  const VISION_ON = `SCREEN SHARE IS NOW ACTIVE.
+
+You can now SEE the user's screen via live descriptions delivered as system messages prefixed with [SCREEN]. Every 5 seconds you receive a fresh description of what is currently visible to the user.
+
+CRITICAL BEHAVIOUR while screen share is active:
+- Treat [SCREEN] descriptions as your eyes — answer EXACTLY as if you are looking at the user's monitor.
+- NEVER say "I can't see your screen" or "I'm a voice assistant without vision". You can see. You do see.
+- When the user points at something ("this button", "this number"), use the latest [SCREEN] description to identify what they mean.
+- Be specific: name the visible button labels, KPIs, headings, sectors, partners, numbers — whatever is in the description.
+- If the description is stale (user mentions something not in the latest snapshot), say "give me a second to refresh my view" — a new description arrives within 5 seconds.`
+
+  const VISION_OFF = 'SCREEN SHARE ENDED. You no longer have screen visibility. Go back to answering based on conversation + your baked-in knowledge.'
+
   function stopScreenShareInternal(silent) {
     if (screenIntervalRef.current) { clearInterval(screenIntervalRef.current); screenIntervalRef.current = null }
     try { screenStreamRef.current?.getTracks().forEach(t => t.stop()) } catch {}
     screenStreamRef.current = null
-    if (screenVideoRef.current) { try { screenVideoRef.current.srcObject = null } catch {} }
+    if (screenVideoRef.current) {
+      try { screenVideoRef.current.srcObject = null } catch {}
+      // Detach from body so we don't leak DOM nodes across sessions.
+      try { screenVideoRef.current.parentNode?.removeChild(screenVideoRef.current) } catch {}
+      screenVideoRef.current = null
+    }
     lastDescriptionRef.current = ''
     if (!silent) {
-      try { realtimeRef.current?.sendContext?.('[Screen share ended.]') } catch {}
+      try { realtimeRef.current?.sendContext?.(VISION_OFF) } catch {}
     }
     patchCall({ screenSharing: false })
   }
@@ -205,15 +227,33 @@ export function CallProvider({ children }) {
     if (!stream || !realtimeRef.current) return
     let video = screenVideoRef.current
     if (!video) {
+      // Attach to <body> hidden, otherwise some browsers don't allocate a
+      // decoder and videoWidth/Height stay 0 forever — frames are blank.
       video = document.createElement('video')
       video.muted = true; video.playsInline = true; video.autoplay = true
+      video.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;'
+      try { document.body.appendChild(video) } catch {}
       screenVideoRef.current = video
     }
     if (video.srcObject !== stream) {
       video.srcObject = stream
       try { await video.play() } catch {}
     }
-    if (!video.videoWidth || !video.videoHeight) return
+    // Wait up to ~1s for metadata before bailing — first frame after attach
+    // sometimes lags.
+    if (!video.videoWidth || !video.videoHeight) {
+      try {
+        await new Promise((resolve) => {
+          const onMeta = () => { video.removeEventListener('loadedmetadata', onMeta); resolve() }
+          video.addEventListener('loadedmetadata', onMeta)
+          setTimeout(() => { video.removeEventListener('loadedmetadata', onMeta); resolve() }, 1000)
+        })
+      } catch {}
+    }
+    if (!video.videoWidth || !video.videoHeight) {
+      console.warn('[screen] no video dimensions yet, skipping this tick')
+      return
+    }
     const maxEdge = 1024
     const ratio = Math.min(maxEdge / video.videoWidth, maxEdge / video.videoHeight, 1)
     const w = Math.round(video.videoWidth * ratio)
@@ -229,9 +269,13 @@ export function CallProvider({ children }) {
         role: userRoleRef.current,
       })
       const desc = (r?.description || '').trim()
-      if (!desc || desc === lastDescriptionRef.current) return
+      if (!desc) return
+      // Always inject the latest snapshot — even if it matches the previous
+      // one. The model needs the freshness signal to answer "what's on my
+      // screen right now" without staleness.
       lastDescriptionRef.current = desc
-      realtimeRef.current?.sendContext?.(`[The user is currently looking at this screen: ${desc}]`)
+      realtimeRef.current?.sendContext?.(`[SCREEN] ${desc}`)
+      console.log('[screen] →', desc.slice(0, 80))
     } catch (e) {
       console.warn('[screen] describe failed', e?.message || e)
     }
@@ -244,10 +288,13 @@ export function CallProvider({ children }) {
       screenStreamRef.current = stream
       patchCall({ screenSharing: true })
       stream.getVideoTracks()[0].onended = () => stopScreenShareInternal()
+      // Announce vision is ON to the model BEFORE the first frame arrives so
+      // any user question in the gap gets the right framing.
+      try { realtimeRef.current?.sendContext?.(VISION_ON) } catch {}
       setTimeout(() => captureAndDescribe(), 600)
       screenIntervalRef.current = setInterval(captureAndDescribe, 5000)
     } catch (e) {
-      // user cancelled or denied — fail quietly
+      console.warn('[screen] getDisplayMedia failed', e?.message || e)
     }
   }, [])
 
