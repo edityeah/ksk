@@ -31,6 +31,7 @@ export class RealtimeVoice {
     persona = 'general',
     extraSystem = '',
     voice,
+    role,
     onUserTranscript,
     onAssistantDelta,
     onAssistantDone,
@@ -40,6 +41,7 @@ export class RealtimeVoice {
     this.persona = persona
     this.extraSystem = extraSystem
     this.voice = voice
+    this.role = role
     this.onUserTranscript = onUserTranscript
     this.onAssistantDelta = onAssistantDelta
     this.onAssistantDone = onAssistantDone
@@ -64,7 +66,12 @@ export class RealtimeVoice {
       const r = await fetch('/api/realtime/session', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'authorization': `Bearer ${tok}` },
-        body: JSON.stringify({ persona: this.persona, extraSystem: this.extraSystem, voice: this.voice }),
+        body: JSON.stringify({
+          persona: this.persona,
+          extraSystem: this.extraSystem,
+          voice: this.voice,
+          role: this.role,
+        }),
       })
       if (!r.ok) {
         const txt = await r.text().catch(() => '')
@@ -87,6 +94,12 @@ export class RealtimeVoice {
 
       this.audioEl = document.createElement('audio')
       this.audioEl.autoplay = true
+      this.audioEl.style.display = 'none'
+      // Attach to <body> so the element lives outside any React tree and
+      // keeps playing even after the AvatarCall view that started the call
+      // unmounts (canvas closed). Without this, some browsers refuse to play
+      // audio from a detached <audio> element.
+      try { document.body.appendChild(this.audioEl) } catch {}
       pc.ontrack = (ev) => {
         if (this.audioEl) this.audioEl.srcObject = ev.streams[0]
       }
@@ -195,6 +208,22 @@ export class RealtimeVoice {
     this.dc.send(JSON.stringify({ type: 'response.create' }))
   }
 
+  // Inject a silent context note (no response triggered). Used to feed the
+  // model what the user is currently looking at when screen-sharing, so when
+  // the user asks "where do I click?" the agent already knows the layout.
+  sendContext(text) {
+    if (!this.dc || this.dc.readyState !== 'open' || !text) return
+    this.dc.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: {
+        type: 'message',
+        role: 'system',
+        content: [{ type: 'input_text', text }],
+      },
+    }))
+    // Deliberately NO response.create — this is background context, not a turn.
+  }
+
   // Mute / unmute the outgoing mic track without tearing down the connection.
   setMuted(muted) {
     this.localStream?.getAudioTracks().forEach(t => { t.enabled = !muted })
@@ -208,6 +237,7 @@ export class RealtimeVoice {
     try { this.pc?.close() } catch {}
     try { this.localStream?.getTracks().forEach(t => t.stop()) } catch {}
     try { if (this.audioEl) this.audioEl.srcObject = null } catch {}
+    try { this.audioEl?.parentNode?.removeChild(this.audioEl) } catch {}
     this.pc = null; this.dc = null; this.localStream = null; this.audioEl = null
     this._setState('closed')
   }

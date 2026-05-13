@@ -1,4 +1,5 @@
 import { useApp } from './context/AppContext.jsx'
+import { CallProvider } from './context/CallProvider.jsx'
 import SplashPage from './pages/SplashPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import PhoneEntryPage from './pages/PhoneEntryPage.jsx'
@@ -38,11 +39,13 @@ export default function App() {
   const isFull = isAuth || screen === 'home'
 
   return (
-    <div className="min-h-screen text-txt-primary" style={{ background: '#F4F6FA', fontFamily: 'Montserrat, sans-serif' }}>
-      <div className={isFull ? 'min-h-screen' : 'min-h-screen max-w-[420px] mx-auto bg-white shadow-card'}>
-        {content}
+    <CallProvider>
+      <div className="min-h-screen text-txt-primary" style={{ background: '#F4F6FA', fontFamily: 'Montserrat, sans-serif' }}>
+        <div className={isFull ? 'min-h-screen' : 'min-h-screen max-w-[420px] mx-auto bg-white shadow-card'}>
+          {content}
+        </div>
+        <Toast />
       </div>
-      <Toast />
-    </div>
+    </CallProvider>
   )
 }

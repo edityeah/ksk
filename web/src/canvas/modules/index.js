@@ -21,6 +21,8 @@ import CareerCounsellorCanvas from './CareerCounsellorCanvas.jsx'
 import MockInterviewCanvas from './MockInterviewCanvas.jsx'
 import LearningAssistantCanvas from './LearningAssistantCanvas.jsx'
 import SwiftyAssistantCanvas from './SwiftyAssistantCanvas.jsx'
+import GrievanceCanvas from './GrievanceCanvas.jsx'
+import SalarySlipCanvas from './SalarySlipCanvas.jsx'
 import GenericCanvas from './GenericCanvas.jsx'
 
 export const CANVAS_MODULES = {
@@ -47,6 +49,8 @@ export const CANVAS_MODULES = {
   mock_interview:       MockInterviewCanvas,
   learning_assistant:   LearningAssistantCanvas,
   swifty_assistant:     SwiftyAssistantCanvas,
+  grievance:            GrievanceCanvas,
+  salary_slip:          SalarySlipCanvas,
   notifications:        NotificationsCanvas,
 
   // Generic placeholder for any type not yet built — renders a clean "coming next" page
@@ -83,7 +87,9 @@ const META = {
   career_counsellor:    { title: 'Career Counsellor', subtitle: 'Karuna · AI career guide', icon: '🎯' },
   mock_interview:       { title: 'Mock Interview',     subtitle: 'Sharma ji · interview coach', icon: '🎙' },
   learning_assistant:   { title: 'Learning Assistant', subtitle: 'Guru ji · AI tutor', icon: '📚' },
-  swifty_assistant:     { title: 'Swifty Assistant',   subtitle: 'KSK navigation + Q&A', icon: '✨' },
+  swifty_assistant:     { title: 'Saathi',              subtitle: 'Your skilling companion · enroll → train → certify → place', icon: '✨' },
+  grievance:            { title: 'Grievance',           subtitle: 'File and track grievances with NSDC', icon: '🆘' },
+  salary_slip:          { title: 'Upload Payslip',      subtitle: 'OCR-verified salary slips → DigiLocker', icon: '🧾' },
 }
 
 export function getCanvasMeta(type) {

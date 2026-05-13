@@ -7,11 +7,11 @@ import { useApp } from '../context/AppContext.jsx'
 import { api } from '../api/client.js'
 import { defaultBotsFor, suggestionsFor, homeLayoutFor, ROLE_LABELS, ROLE_SCOPES } from '../roles/roleConfig.js'
 import { dispatchActionForRole } from '../nlp/dispatch.js'
-import NsdcLogo from '../components/NsdcLogo.jsx'
 import ChatBubble from '../components/ChatBubble.jsx'
 import TypingIndicator from '../components/TypingIndicator.jsx'
 import { Bell, LogOut, Plus, Search, Sparkles, Send, Mic, Phone, ChevronUp, ChevronRight, MessageSquare, Menu } from 'lucide-react'
 import CanvasPanel from '../canvas/CanvasPanel.jsx'
+import FloatingCallPill from '../components/FloatingCallPill.jsx'
 
 const TONES = {
   indigo:  { bg: 'bg-indigo-100',  fg: 'text-indigo-600',  ring: 'hover:border-indigo-300' },
@@ -100,10 +100,9 @@ function Shell({ mobile }) {
   return (
     <div className="h-screen flex bg-white overflow-hidden" style={{ fontFamily: 'Montserrat, sans-serif' }}>
       {/* Sidebar */}
-      <aside className={`${showSidebar ? 'fixed inset-0 z-40' : 'hidden'} md:flex md:static w-[280px] flex-shrink-0 flex-col border-r border-bdr-light bg-white`}>
-        <div className="p-4 flex items-center gap-2">
-          <div className="bg-white rounded-md px-1.5 py-0.5"><NsdcLogo size={26} showText={false} /></div>
-          <div className="font-bold text-[15px] text-txt-primary leading-tight">Kaushal<br />Samiksha</div>
+      <aside className={`${showSidebar ? 'fixed inset-0 z-40' : 'hidden'} md:flex md:static w-[280px] flex-shrink-0 flex-col border-r border-bdr-strong bg-surface-secondary shadow-[1px_0_0_0_rgba(15,23,42,0.04)]`}>
+        <div className="px-4 pt-5 pb-4 flex items-center justify-center">
+          <img src="/ksk_logo.png" alt="Kaushal Samiksha" className="h-16 w-auto object-contain" />
         </div>
 
         <div className="px-4">
@@ -114,7 +113,7 @@ function Shell({ mobile }) {
         </div>
 
         <div className="px-4 mt-3">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-pill bg-surface-page border border-bdr-light">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-pill bg-white border border-bdr">
             <Search className="w-3.5 h-3.5 text-txt-tertiary" />
             <input placeholder="Search chats" className="flex-1 bg-transparent text-[12px] outline-none placeholder:text-txt-tertiary" />
           </div>
@@ -134,7 +133,7 @@ function Shell({ mobile }) {
           )}
         </div>
 
-        <div className="p-3 border-t border-bdr-light">
+        <div className="p-3 border-t border-bdr">
           <ProfilePill onSignOut={ctx.signOut} />
         </div>
       </aside>
@@ -142,11 +141,15 @@ function Shell({ mobile }) {
 
       {/* Main — relative so CanvasPanel overlays inside this area only (not over the sidebar) */}
       <main className="relative flex-1 flex flex-col min-w-0 bg-white">
-        <div className="flex items-center justify-between md:justify-end px-3 md:px-6 py-3 border-b border-bdr-light/60 flex-shrink-0">
+        <div className="flex items-center justify-between md:justify-end px-3 md:px-6 py-3 border-b border-bdr bg-gradient-to-b from-surface-page/40 to-white flex-shrink-0">
           <button onClick={() => setShowSidebar(true)} className="md:hidden p-2 rounded-lg hover:bg-slate-100">
             <Menu className="w-5 h-5 text-txt-secondary" />
           </button>
-          <BellButton />
+          <div className="flex items-center gap-2 md:gap-3">
+            <FloatingCallPill />
+            <SaathiQuickButton openCanvas={ctx.openCanvas} />
+            <BellButton />
+          </div>
         </div>
         {greetedView
           ? <GreetingPanel ctx={ctx} bots={bots} chips={chips} onSend={send} onPickBot={openBot} />
@@ -227,6 +230,22 @@ function ProfilePill({ onSignOut }) {
   )
 }
 
+// Universal access to Saathi — visible in the top app header from any page
+// for any role. One tap opens the swifty_assistant canvas where the user can
+// type, voice-call, video-call or share their screen for live UI guidance.
+function SaathiQuickButton({ openCanvas }) {
+  return (
+    <button
+      onClick={() => openCanvas({ type: 'swifty_assistant' })}
+      title="Talk to Saathi"
+      className="inline-flex items-center gap-1.5 md:gap-2 pl-2.5 pr-3 md:pl-3 md:pr-4 py-1.5 md:py-2 rounded-pill bg-gradient-to-r from-primary to-primary-dark text-white font-bold text-[11px] md:text-[12px] shadow-card hover:opacity-90 active:scale-95 transition"
+    >
+      <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4" />
+      <span className="hidden sm:inline">Saathi</span>
+    </button>
+  )
+}
+
 function BellButton() {
   const { notifications, openCanvas } = useApp()
   const unread = notifications.filter(n => !n.readAt).length
@@ -247,7 +266,7 @@ function GreetingPanel({ ctx, bots, chips, onSend, onPickBot }) {
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-5xl mx-auto px-4 md:px-10 pt-6 md:pt-10 pb-6">
         <div className="text-center">
-          <div className="text-[12px] font-bold uppercase tracking-[3px] text-primary mb-3">Swifty Assistant</div>
+          <div className="text-[12px] font-bold uppercase tracking-[3px] text-primary mb-3">Saathi · Your skilling companion</div>
           <h1 className="text-[26px] md:text-[42px] font-bold text-txt-primary leading-tight">
             Hi {first} <span aria-hidden>👋</span>,
           </h1>
@@ -255,13 +274,13 @@ function GreetingPanel({ ctx, bots, chips, onSend, onPickBot }) {
             what can I help with?
           </h2>
           <p className="text-[14px] text-txt-secondary mt-3 max-w-2xl mx-auto">
-            Type below or pick an app — your KSK tools at a glance. Swifty opens dashboards, fills forms,
-            answers policy questions and routes you to the right action.
+            Type below or pick an app. Saathi guides you from enrollment to training, certification
+            and placement — opens dashboards, fills forms, and routes you to the right action.
           </p>
           <div className="mt-6">
             <button onClick={() => ctx.openCanvas({ type: 'swifty_assistant' })}
               className="inline-flex items-center gap-2.5 px-6 py-3 rounded-pill bg-primary text-white font-bold text-[15px] shadow-modal hover:opacity-90 active:scale-95 transition">
-              <Phone className="w-4 h-4" /> Talk to Swifty Assistant
+              <Phone className="w-4 h-4" /> Talk to Saathi
             </button>
           </div>
         </div>
@@ -323,13 +342,13 @@ function MessageInput({ onSend }) {
   const [v, setV] = useState('')
   function submit(e) { e?.preventDefault?.(); const t = v.trim(); if (!t) return; setV(''); onSend(t) }
   return (
-    <div className="flex-shrink-0 border-t border-bdr-light bg-white px-4 md:px-10 py-4">
+    <div className="flex-shrink-0 border-t border-bdr bg-gradient-to-t from-surface-page/40 to-white px-4 md:px-10 py-4">
       <form onSubmit={submit} className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-2.5 rounded-pill border border-bdr-light bg-surface-page px-2 py-1.5">
+        <div className="flex items-center gap-2.5 rounded-pill border border-bdr bg-white px-2 py-1.5 shadow-card">
           <button type="button" className="w-9 h-9 rounded-full bg-white shadow-card flex items-center justify-center flex-shrink-0">
             <Mic className="w-4 h-4 text-primary" />
           </button>
-          <input value={v} onChange={e => setV(e.target.value)} placeholder="Message Swifty…"
+          <input value={v} onChange={e => setV(e.target.value)} placeholder="Message Saathi…"
             className="flex-1 bg-transparent text-[14px] py-1.5 outline-none placeholder:text-txt-tertiary" />
           <button type="submit" disabled={!v.trim()}
             className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0 disabled:bg-slate-300">

@@ -6,6 +6,23 @@ export function getToken() { return localStorage.getItem(TOKEN_KEY) }
 export function setToken(t) { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY) }
 export function clearToken() { localStorage.removeItem(TOKEN_KEY) }
 
+// Cross-tab session invalidation. Any one 401 from any authed endpoint means
+// our JWT is stale or signed with a different secret than the server is now
+// running. Clear the token + session and let AppContext bounce back to splash
+// on the next render. This stops the "every endpoint 401s in a loop" trap.
+let invalidating = false
+function invalidateSession() {
+  if (invalidating) return
+  invalidating = true
+  try {
+    clearToken()
+    localStorage.removeItem('ksk.session.v1')
+  } catch {}
+  // Force a hard refresh to kick the user back to splash. Using a query
+  // param so any in-flight redirect / state isn't preserved.
+  try { window.location.assign('/?sessionExpired=1') } catch {}
+}
+
 async function req(method, path, body) {
   const headers = { 'content-type': 'application/json' }
   const tok = getToken()
@@ -13,6 +30,11 @@ async function req(method, path, body) {
   const res = await fetch(path.startsWith('http') ? path : path, {
     method, headers, body: body ? JSON.stringify(body) : undefined,
   })
+  // 401 with a token attached means the token itself is no longer valid —
+  // wipe the session before anything else can read stale state.
+  if (res.status === 401 && tok) {
+    invalidateSession()
+  }
   let json = null
   try { json = await res.json() } catch {}
   if (!res.ok) {

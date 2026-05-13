@@ -24,6 +24,7 @@ import {
   Send, Loader2,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext.jsx'
+import { useCall } from '../context/CallProvider.jsx'
 import { api, getToken } from '../api/client.js'
 
 // Build the global "who is the user" block that every persona should see,
@@ -51,8 +52,9 @@ import { loadAnam } from '../utils/anamSdk.js'
 import { RealtimeVoice } from '../utils/realtimeVoice.js'
 import { CanvasHeaderActionsContext } from '../canvas/CanvasHeaderActions.js'
 import ChatBubble from './ChatBubble.jsx'
+import CardRenderer from './cards/CardRenderer.jsx'
 
-export default function AvatarCall({ persona, title, intro, useWebSearch, extraSystem, suggestions = [], pendingPrompt, threadId: initialThreadId }) {
+export default function AvatarCall({ persona, title, intro, useWebSearch, extraSystem, suggestions = [], pendingPrompt, threadId: initialThreadId, onCallStateChange }) {
   const { showToast, meExtra, role, refreshThreads } = useApp()
   const { setActions } = useContext(CanvasHeaderActionsContext) || {}
   const threadIdRef = useRef(initialThreadId || null)        // persisted thread id (server)
@@ -65,21 +67,79 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
   const messagesRef = useRef([])
   useEffect(() => { messagesRef.current = messages }, [messages])
 
-  // 'idle' = no call. callMode is set by which icon the user clicked.
-  const [callState, setCallState] = useState('idle')   // idle | connecting | live | error
-  const [callMode, setCallMode] = useState(null)        // 'voice' | 'video' | null
-  const [callError, setCallError] = useState(null)
-  const [muted, setMuted] = useState(false)
-  const [screenSharing, setScreenSharing] = useState(false)
+  // ── Call state now lives in app-level CallProvider so it survives canvas
+  // close. We derive local-looking variables from the global activeCall —
+  // BUT only if the active call's persona matches this view (otherwise some
+  // other persona is in a call and we should appear idle).
+  const call = useCall() || {}
+  const { activeCall, startVoiceCall, startVideoCall, endCall,
+          toggleMute: ctxToggleMute, sendText: ctxSendText,
+          startScreenShare, stopScreenShare,
+          bindHandlers, bindVideoElement, screenStreamRef } = call
+  const isMyCall = activeCall && activeCall.persona === persona
+  const callState = isMyCall ? activeCall.state : 'idle'
+  const callMode  = isMyCall ? activeCall.mode  : null
+  const muted     = isMyCall ? activeCall.muted : false
+  const screenSharing = isMyCall ? activeCall.screenSharing : false
+  const callError = isMyCall ? activeCall.error : null
+  const listening = isMyCall && callState === 'live' && !muted
 
-  const mediaRef = useRef(null)
-  const anamRef = useRef(null)
-  const realtimeRef = useRef(null)             // OpenAI Realtime client (voice mode)
+  const mediaRef = useRef(null)                // <video> element for Anam in video mode
   const assistantPlaceholderRef = useRef(-1)   // index of the current streaming bot bubble
   const streamAbortRef = useRef(null)          // AbortController for in-flight /api/ai/stream
-  const [listening, setListening] = useState(false)
 
-  useEffect(() => () => stopCall(true), [])
+  // Bind transcript handlers to the global call session while this view is
+  // mounted. On unmount we DELIBERATELY do not end the call — we just clear
+  // the binding so the call continues in the background.
+  useEffect(() => {
+    if (!bindHandlers || !isMyCall) return
+    bindHandlers({
+      onUserTranscript: (text) => {
+        setMessages(m => {
+          const next = [...m, { role: 'user', text }, { role: 'bot', text: '' }]
+          assistantPlaceholderRef.current = next.length - 1
+          return next
+        })
+      },
+      onAssistantDelta: (delta) => {
+        const idx = assistantPlaceholderRef.current
+        if (idx < 0) return
+        setMessages(m => {
+          const c = m.slice()
+          if (c[idx]) c[idx] = { ...c[idx], text: (c[idx].text || '') + delta }
+          return c
+        })
+      },
+      onAssistantDone: (full) => {
+        const idx = assistantPlaceholderRef.current
+        if (idx >= 0) {
+          setMessages(m => {
+            const c = m.slice()
+            if (c[idx]) c[idx] = { ...c[idx], text: full || c[idx].text }
+            return c
+          })
+        }
+        assistantPlaceholderRef.current = -1
+      },
+    })
+    return () => bindHandlers(null)
+  }, [bindHandlers, isMyCall])
+
+  // Video mode needs its <video> element registered with the Anam client.
+  // When the canvas re-opens during an existing video call, re-bind so the
+  // video frame renders again.
+  useEffect(() => {
+    if (isMyCall && callMode === 'video' && mediaRef.current) {
+      try { bindVideoElement?.(mediaRef.current) } catch {}
+    }
+    return () => { try { bindVideoElement?.(null) } catch {} }
+  }, [isMyCall, callMode, bindVideoElement])
+
+  // Tell the parent canvas about call state transitions so it can collapse
+  // hero / quick-action cards while a call is live.
+  useEffect(() => {
+    try { onCallStateChange?.(callState, callMode) } catch {}
+  }, [callState, callMode, onCallStateChange])
 
   // Restore history if a thread was opened from the sidebar.
   useEffect(() => {
@@ -112,150 +172,46 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
     if (!text) return
     // During a live voice call, send the prompt through the realtime channel
     // so the AI speaks the answer. Otherwise use the text streaming path.
-    if (callMode === 'voice' && realtimeRef.current) {
-      setMessages(m => {
-        const next = [...m, { role: 'user', text }, { role: 'bot', text: '' }]
-        assistantPlaceholderRef.current = next.length - 1
-        return next
-      })
-      persistMessage('user', text)
-      realtimeRef.current.sendText(text)
+    if (isMyCall && callMode === 'voice' && ctxSendText) {
+      ctxSendText(text)
     } else {
-      streamReply(text, anamRef.current)
+      streamReply(text, null)
     }
-  }, [pendingPrompt])
+  }, [pendingPrompt, isMyCall, callMode, ctxSendText])
 
   // ── Start a call (mode = 'voice' | 'video') ───────────────────────────
+  // All session work happens in CallProvider so the connection survives
+  // canvas close. We just translate the user gesture → context call.
   const startCall = useCallback(async (mode) => {
-    if (callState === 'connecting' || callState === 'live') return
-    setCallMode(mode); setCallState('connecting'); setCallError(null)
-
-    // VOICE: OpenAI Realtime via WebRTC. Single connection handles mic capture,
-    // server-side VAD, LLM, TTS, and barge-in. No DIY phrase splitting / Whisper
-    // round-trips / echo gymnastics — the API does all of that natively.
+    if (activeCall) {
+      // Another persona is already on a call — don't silently steal it.
+      showToast({ kind: 'warn', text: 'You\'re already in a call. End it first.' })
+      return
+    }
     if (mode === 'voice') {
-      try {
-        const rt = new RealtimeVoice({
-          persona,
-          extraSystem: effectiveSystem,
-          onState: (s) => {
-            console.log('[realtime] state', s)
-            if (s === 'live')  setCallState('live')
-            if (s === 'error') setCallState('error')
-            if (s === 'closed' && callMode === 'voice') setListening(false)
-          },
-          onUserTranscript: (text) => {
-            console.log('[realtime] user →', text)
-            // Finalize: drop any unstarted placeholder, push the user turn,
-            // and start a fresh assistant placeholder ready to be filled in
-            // by streaming deltas.
-            setMessages(m => {
-              const next = [...m, { role: 'user', text }, { role: 'bot', text: '' }]
-              assistantPlaceholderRef.current = next.length - 1
-              return next
-            })
-            persistMessage('user', text)
-          },
-          onAssistantDelta: (delta) => {
-            const idx = assistantPlaceholderRef.current
-            if (idx < 0) return
-            setMessages(m => {
-              const c = m.slice()
-              if (c[idx]) c[idx] = { ...c[idx], text: (c[idx].text || '') + delta }
-              return c
-            })
-          },
-          onAssistantDone: (full) => {
-            const idx = assistantPlaceholderRef.current
-            if (idx >= 0) {
-              setMessages(m => {
-                const c = m.slice()
-                if (c[idx]) c[idx] = { ...c[idx], text: full || c[idx].text }
-                return c
-              })
-            }
-            assistantPlaceholderRef.current = -1
-            if (full) persistMessage('bot', full)
-          },
-          onError: (err) => {
-            console.error('[realtime] error', err)
-            showToast({ kind: 'danger', text: err?.message || 'Voice error' })
-          },
-        })
-        realtimeRef.current = rt
-        await rt.connect()
-        setListening(true)
-        return
-      } catch (e) {
-        console.error('[realtime] start failed', e)
-        setCallError(e.message || String(e)); setCallState('error'); setCallMode(null)
-        return
-      }
+      await startVoiceCall?.({
+        persona, title, extraSystem: effectiveSystem,
+        threadId: threadIdRef.current, role,
+      })
+    } else {
+      await startVideoCall?.({
+        persona, title, extraSystem: effectiveSystem,
+        threadId: threadIdRef.current, role,
+        mediaElement: mediaRef.current,
+        onHistory: async (history, client) => {
+          // Anam transcribes on its own — we forward the user turn into the
+          // existing /api/ai/stream pipeline so the assistant reply uses our
+          // server prompts (cards, persona, etc.).
+          const last = history[history.length - 1]
+          if (last?.content) await streamReply(last.content, client)
+        },
+      })
     }
+  }, [activeCall, startVoiceCall, startVideoCall, persona, title, effectiveSystem, role, showToast])
 
-    // Otherwise: Anam path (avatar lip-sync, video, or voice without Cartesia)
-    try {
-      const session = await api.post('/api/avatar/session', { persona })
-      const sessionToken = session.sessionToken || session.session_token || session.token
-      if (!sessionToken) throw new Error('No sessionToken from /api/avatar/session')
-
-      const sdk = await loadAnam()
-      const createClient = sdk.createClient || sdk.default?.createClient
-      if (typeof createClient !== 'function') throw new Error('Anam SDK is missing createClient export')
-
-      const client = createClient(sessionToken)
-      anamRef.current = client
-
-      // Deduped user-message handler — Anam re-fires the history for assistant
-      // updates too; only respond when the latest entry is a fresh user turn.
-      const respondedTo = new Set()
-      const onHistory = async (history) => {
-        if (!Array.isArray(history) || history.length === 0) return
-        const last = history[history.length - 1]
-        if (last?.role !== 'user') return
-        const key = last.id || last.messageId || `${history.length}::${(last.content || '').slice(0, 80)}`
-        if (respondedTo.has(key)) return
-        respondedTo.add(key)
-        if (last.content) await streamReply(last.content, client)
-      }
-      try { client.addListener?.('MESSAGE_HISTORY_UPDATED', onHistory) } catch (e) { console.warn('[anam] listener attach failed', e) }
-
-      const el = mediaRef.current
-      if (!el) throw new Error('Media element not mounted')
-      if (!el.id) el.id = `anam-media-${persona}`
-      try {
-        await client.streamToVideoElement(el.id)
-      } catch (e) {
-        if (/not found/i.test(String(e?.message || e))) {
-          await new Promise(r => requestAnimationFrame(() => r()))
-          await client.streamToVideoElement(el.id)
-        } else { throw e }
-      }
-      try { el.muted = false; el.volume = 1; await el.play() } catch {}
-
-      setCallState('live')
-    } catch (e) {
-      console.error('[avatar] start failed', e)
-      const msg = e.message || String(e)
-      setCallError(msg.includes('anam_not_configured')
-        ? 'Avatar is not configured (ANAM_API_KEY missing on the server).'
-        : msg)
-      setCallState('error')
-      setCallMode(null)
-    }
-  }, [persona, callState])
-
-  function stopCall(silent = false) {
-    try { anamRef.current?.stopStreaming?.() } catch {}
-    try { anamRef.current?.disconnect?.() } catch {}
-    anamRef.current = null
-    try { if (mediaRef.current) { mediaRef.current.srcObject = null; mediaRef.current.pause() } } catch {}
-    try { realtimeRef.current?.close() } catch {}
-    realtimeRef.current = null
-    assistantPlaceholderRef.current = -1
-    if (!silent) { setCallState('idle'); setCallMode(null); setListening(false) }
-    setMuted(false); setScreenSharing(false); setCallError(null)
-  }
+  // Wrapper so the call buttons in the header keep their old call name. The
+  // global endCall() in context tears down realtime + anam + screen share.
+  function stopCall() { endCall?.() }
 
   // Persist a message to the server thread. Lazily creates the thread on the
   // first call. Best-effort — failures don't block the user.
@@ -325,10 +281,29 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
           if (p.delta) {
             buffer += p.delta
             const idx = placeholderIndex
-            setMessages(m => { const c = m.slice(); if (idx >= 0 && c[idx]) c[idx] = { ...c[idx], text: buffer }; return c })
+            // Collapse runs of 3+ newlines to a single blank line — when the
+            // server strips a <<<KSKCARD>>> fence out of the stream, the
+            // newlines around it stay behind and leave a visible gap inside
+            // the bubble. Trim leading / trailing whitespace too.
+            const cleaned = buffer.replace(/[ \t]*\n[ \t]*\n[ \t\n]+/g, '\n\n').replace(/^\s+|\s+$/g, '')
+            setMessages(m => { const c = m.slice(); if (idx >= 0 && c[idx]) c[idx] = { ...c[idx], text: cleaned }; return c })
             try { talkStream?.streamMessageChunk(p.delta) } catch {}
           }
           if (p.citation?.url) citations.push(p.citation)
+          // Card events from the server's card parser — append to the
+          // current assistant bubble's `cards` list so ChatBubble can render
+          // the rich component below the text.
+          if (p.card && typeof p.card === 'object') {
+            const idx = placeholderIndex
+            setMessages(m => {
+              const c = m.slice()
+              if (idx >= 0 && c[idx]) {
+                const cards = c[idx].cards ? [...c[idx].cards, p.card] : [p.card]
+                c[idx] = { ...c[idx], cards }
+              }
+              return c
+            })
+          }
           if (p.done) {
             if (citations.length) {
               const idx = placeholderIndex
@@ -362,42 +337,25 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
     const t = input.trim()
     if (!t || thinking) return
     setInput('')
-    // Active voice call: hand the typed text to the Realtime peer connection
-    // so the AI hears and responds as if it were spoken. The user-transcript +
-    // assistant-delta events from the data channel will populate the thread.
-    if (callMode === 'voice' && realtimeRef.current) {
-      setMessages(m => {
-        const next = [...m, { role: 'user', text: t }, { role: 'bot', text: '' }]
-        assistantPlaceholderRef.current = next.length - 1
-        return next
-      })
-      persistMessage('user', t)
-      realtimeRef.current.sendText(t)
-      return
-    }
-    streamReply(t, anamRef.current)
+    // Active voice call → route through the global call so the AI speaks back.
+    // Otherwise use the text streaming path.
+    if (isMyCall && callMode === 'voice' && ctxSendText?.(t)) return
+    streamReply(t, null)
   }
   function toggleMute() {
-    setMuted(m => {
-      const next = !m
-      // Voice mode → mic is on the Realtime WebRTC peer connection.
-      try { realtimeRef.current?.setMuted(next) } catch {}
-      // Video mode → mic is on the Anam SDK.
-      try {
-        const c = anamRef.current
-        if (c?.muteInputAudio) c.muteInputAudio(next)
-        else if (c?.setInputAudioEnabled) c.setInputAudioEnabled(!next)
-      } catch {}
-      return next
-    })
+    if (!isMyCall) return
+    ctxToggleMute?.()
   }
   async function toggleScreenShare() {
-    if (screenSharing) { setScreenSharing(false); showToast({ kind: 'info', text: 'Screen sharing stopped.' }); return }
-    try {
-      await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
-      setScreenSharing(true)
-      showToast({ kind: 'success', text: 'Screen shared with the assistant.' })
-    } catch { showToast({ kind: 'warn', text: 'Screen share denied.' }) }
+    if (!isMyCall) {
+      showToast({ kind: 'warn', text: 'Start the call first, then share your screen.' })
+      return
+    }
+    if (screenSharing) {
+      stopScreenShare?.()
+    } else {
+      await startScreenShare?.()
+    }
   }
 
   // ── Inject the WhatsApp-style call icons into the canvas header ─────────
@@ -420,11 +378,9 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
           <HeaderIconBtn onClick={toggleMute} tone={muted ? 'danger' : 'neutral'} title={muted ? 'Unmute' : 'Mute'}>
             {muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </HeaderIconBtn>
-          {callMode === 'video' && (
-            <HeaderIconBtn onClick={toggleScreenShare} tone={screenSharing ? 'primary' : 'neutral'} title={screenSharing ? 'Stop sharing' : 'Share screen'}>
-              {screenSharing ? <ScreenShareOff className="w-4 h-4" /> : <ScreenShare className="w-4 h-4" />}
-            </HeaderIconBtn>
-          )}
+          <HeaderIconBtn onClick={toggleScreenShare} tone={screenSharing ? 'primary' : 'neutral'} title={screenSharing ? 'Stop sharing' : 'Share screen'}>
+            {screenSharing ? <ScreenShareOff className="w-4 h-4" /> : <ScreenShare className="w-4 h-4" />}
+          </HeaderIconBtn>
           <button onClick={() => stopCall()} title="End call"
             className="inline-flex items-center gap-1 px-2.5 md:px-3 py-1.5 rounded-pill bg-danger text-white font-bold text-[11px] md:text-[12px] hover:bg-danger/90 ml-1">
             <PhoneOff className="w-3.5 h-3.5" /> <span className="hidden sm:inline">End</span>
@@ -443,53 +399,110 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
   const showRibbon = callState !== 'idle'
   const personaShort = (title || '').split(' · ')[0] || 'Assistant'
 
-  return (
-    <div style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      {/* Intro band */}
-      <div className="px-5 pt-4 pb-3 border-b border-bdr-light bg-white">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-primary">{title || 'AI Companion'}</div>
-        <div className="text-[12px] text-txt-secondary">{intro || 'Chat, or tap the phone/video icon above for a live call.'}</div>
-      </div>
+  // Mount the screen-share PiP into a video element via a callback ref so
+  // that whenever the stream is (re)created the element gets it without
+  // needing a manual srcObject assignment.
+  const sharePipRef = (el) => {
+    if (el && screenStreamRef.current && el.srcObject !== screenStreamRef.current) {
+      el.srcObject = screenStreamRef.current
+      try { el.play() } catch {}
+    }
+  }
 
-      {/* Live call ribbon — visible only when in call. ALWAYS contains the
-          <video> element so audio plays (Anam requires it onscreen). */}
-      <div className={`${showRibbon ? 'block' : 'hidden'} sticky top-[64px] z-10 bg-gradient-to-b from-primary-light/60 to-white border-b border-bdr-light`}>
-        <div className="px-4 py-3 flex items-center gap-3">
+  return (
+    <div className="h-full flex flex-col bg-white relative" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+
+      {/* Picture-in-picture preview of the user's shared screen — only when
+          screen-sharing during a live call. Floats bottom-right of the canvas
+          so it never blocks chat content. */}
+      {screenSharing && callState === 'live' && (
+        <div className="absolute bottom-20 right-3 md:right-5 z-20 w-44 md:w-56 rounded-xl overflow-hidden bg-slate-900 shadow-modal border border-bdr">
           <video
-            ref={mediaRef}
-            id={`anam-media-${persona}`}
+            ref={sharePipRef}
+            muted
             playsInline
             autoPlay
-            className={callMode === 'video'
-              ? 'rounded-2xl bg-slate-900 w-full max-w-[420px] max-h-[240px] object-cover'
-              : 'rounded-full bg-slate-900 w-14 h-14 object-cover flex-shrink-0'}
+            className="w-full h-auto object-contain bg-slate-900"
           />
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-bold text-txt-primary truncate flex items-center gap-2">
-              {callState === 'connecting' ? 'Connecting…' : `On a ${callMode} call with ${personaShort}`}
+          <div className="px-2 py-1 bg-slate-900 text-white text-[10px] flex items-center justify-between">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Sharing screen
+            </span>
+            <button onClick={() => stopScreenShare()} className="text-[10px] text-rose-300 hover:text-rose-200 font-bold">Stop</button>
+          </div>
+        </div>
+      )}
+      {/* Zone 1 — Call surface. Two presentations:
+          • voice call → big pulsing orb in the middle, name + status, no chat
+            visible below (call mode owns the whole canvas like a phone call)
+          • video call → contained 220px video band with caption, chat below */}
+      {showRibbon && callMode === 'voice' && (
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-gradient-to-b from-primary-light/60 to-white px-6 py-10">
+          {/* Hidden but mounted — Anam audio plays through this. Voice-only
+              mode (Realtime API) doesn't actually use it, but we keep it for
+              the Anam fallback path. */}
+          <video ref={mediaRef} id={`anam-media-${persona}`} playsInline autoPlay className="hidden" />
+
+          {/* Pulsing orb — animated rings around a solid centre. */}
+          <div className="relative w-48 h-48 flex items-center justify-center">
+            {callState === 'live' && (
+              <>
+                <span className="absolute inset-0 rounded-full bg-primary/20 animate-pulse-ring" />
+                <span className="absolute inset-4 rounded-full bg-primary/30 animate-pulse-ring" style={{ animationDelay: '0.4s' }} />
+              </>
+            )}
+            <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center text-[40px] font-bold shadow-modal">
+              {personaShort.charAt(0)}
+            </div>
+          </div>
+
+          <div className="mt-8 text-[20px] font-bold text-txt-primary">{personaShort}</div>
+          <div className="mt-1 text-[13px] text-txt-secondary">
+            {callState === 'connecting' ? 'Connecting…' : callState === 'live' ? (listening ? 'Listening…' : 'Speak naturally') : ''}
+          </div>
+          {callState === 'error' && callError && (
+            <div className="mt-3 text-[12px] text-danger">{callError}</div>
+          )}
+        </div>
+      )}
+
+      {showRibbon && callMode === 'video' && (
+        <div className="flex-shrink-0 bg-gradient-to-b from-primary-light/50 to-white border-b border-bdr">
+          <div className="px-4 py-3 flex flex-col items-center gap-2">
+            <video
+              ref={mediaRef}
+              id={`anam-media-${persona}`}
+              playsInline
+              autoPlay
+              className="rounded-2xl bg-slate-900 w-auto h-[180px] md:h-[220px] aspect-video object-cover shadow-card"
+            />
+            <div className="flex items-center gap-2 text-[12px] font-bold text-txt-primary">
+              {callState === 'connecting' ? 'Connecting…' : `On a video call with ${personaShort}`}
               {listening && callState === 'live' && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-pill bg-rose-100 text-rose-700 text-[10px] font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" /> listening
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-txt-secondary truncate">
-              {callState === 'live' ? 'Speak naturally — Whisper transcribes, Cartesia replies.' : ' '}
-            </div>
-            {callState === 'error' && callError && <div className="text-[11px] text-danger mt-1">{callError}</div>}
+            {callState === 'error' && callError && (
+              <div className="text-[11px] text-danger">{callError}</div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Chat thread (always visible) */}
-      <div className="px-4 md:px-5 py-4 flex flex-col gap-2.5 bg-white min-h-[260px]">
+      {/* Zone 2 — Chat thread. Takes the rest of the height and scrolls.
+          Hidden during a voice call (Zone 1 already fills the canvas like a
+          phone call). Visible in video mode (under the video) and in text mode. */}
+      <div className={`${callMode === 'voice' && callState !== 'idle' ? 'hidden' : 'flex'} flex-1 min-h-0 overflow-y-auto px-4 md:px-5 py-4 flex-col gap-2.5`}>
         {messages.length === 0 && suggestions.length > 0 && (
           <div className="mb-3">
             <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary mb-2">Try asking</div>
             <div className="flex flex-wrap gap-2">
               {suggestions.map((s, i) => (
                 <button key={i} onClick={() => streamReply(s, anamRef.current)}
-                  className="text-left text-[12px] px-3 py-2 rounded-2xl border border-bdr-light bg-white hover:border-primary">
+                  className="text-left text-[12px] px-3 py-2 rounded-2xl border border-bdr bg-white hover:border-primary">
                   {s}
                 </button>
               ))}
@@ -502,6 +515,9 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
         {messages.map((m, i) => (
           <div key={i}>
             <ChatBubble role={m.role} text={m.text} />
+            {Array.isArray(m.cards) && m.cards.map((card, j) => (
+              <CardRenderer key={j} card={card} onChip={(text) => streamReply(text, anamRef.current)} />
+            ))}
             {m.citations?.length > 0 && (
               <div className="text-[10px] text-txt-tertiary mt-1 ml-2 flex flex-wrap gap-x-3">
                 {m.citations.map((c, j) => (
@@ -514,9 +530,9 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
         {thinking && <div className="text-[11px] text-txt-tertiary px-2">thinking…</div>}
       </div>
 
-      {/* Sticky input */}
-      <div className="sticky bottom-0 px-3 md:px-4 py-3 border-t border-bdr-light bg-white z-10">
-        <div className="flex items-center gap-2 rounded-pill border border-bdr-light bg-surface-page px-2 py-1.5">
+      {/* Zone 3 — Input. flex-shrink-0 so it never gets squeezed. */}
+      <div className="flex-shrink-0 px-3 md:px-4 py-3 border-t border-bdr bg-gradient-to-t from-surface-page/40 to-white">
+        <div className="flex items-center gap-2 rounded-pill border border-bdr bg-white shadow-card px-2 py-1.5">
           <input value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && sendText()}
             placeholder={`Message ${personaShort}…`}

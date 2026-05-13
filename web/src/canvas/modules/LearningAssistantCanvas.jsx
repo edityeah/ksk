@@ -18,6 +18,9 @@ export default function LearningAssistantCanvas({ context }) {
   const { meExtra } = useApp()
   const threadId = context?.threadId || null
   const [pending, setPending] = useState(null)
+  // Same WhatsApp-style behaviour as Career Counsellor: hide the hero + cards
+  // once a call starts so the call UI gets the full canvas.
+  const [onCall, setOnCall] = useState(false)
   const t = meExtra?.trainee
   const track = t?.batch?.track
   const jr = track?.jobRoles?.[0]?.jobRole
@@ -25,31 +28,36 @@ export default function LearningAssistantCanvas({ context }) {
 
   const extraSystem = track ? `Current course: ${track.name}. Job role: ${jr?.name || 'TBD'} (NSQF L${jr?.nsqfLevel}). Scheme: ${t.batch?.scheme?.code}. Tailor explanations to this course context.` : ''
 
+  // Learner-perspective actions, sourced from the Sample Queries sheet.
+  // Each fires a card-shaped response (resources, schedule, score, etc.).
   const ACTIONS = [
-    { id: 'today',     icon: BookOpen,   tone: 'indigo',  title: "Today's concept",     desc: 'Explain a concept from your course',
-      prompt: track ? `Teach me one important concept from my ${track.name} course today. Use the 3-step format: what it is, real example, quick check.` : 'Teach me a concept from a popular skilling course.' },
-    { id: 'quiz',      icon: ListChecks, tone: 'amber',   title: 'Quick quiz',         desc: '5-question quiz on your job role',
-      prompt: `Quiz me on ${jr?.name || 'my skilling course'}. Ask 5 multiple-choice questions one at a time. After each answer, tell me if I'm right and explain.` },
+    { id: 'notes',     icon: BookOpen,   tone: 'indigo',  title: "Today's notes",       desc: 'Materials from today\'s session',
+      prompt: "Show me today's notes and study material." },
+    { id: 'video',     icon: Sparkles,   tone: 'sky',     title: 'Module videos',       desc: 'Watch the latest module recording',
+      prompt: track ? `Where's the video for the latest module of ${track.name}? Give me the link or download.` : "Where's the video for module 3 of my course?" },
+    { id: 'practice',  icon: FileText,   tone: 'emerald', title: 'Practice questions',  desc: 'Prep for the next assessment',
+      prompt: 'Give me practice questions for the next test on my current QP / NOS.' },
+    { id: 'syllabus',  icon: ListChecks, tone: 'amber',   title: 'Full syllabus',       desc: 'What\'s covered + when',
+      prompt: 'Show me the full syllabus for my course, module by module.' },
     { id: 'doubt',     icon: HelpCircle, tone: 'rose',    title: 'Ask a doubt',         desc: 'Get help with anything confusing',
-      prompt: 'I have a doubt about my course. ' },
-    { id: 'practice',  icon: FileText,   tone: 'emerald', title: 'Practice scenario',   desc: 'Real-world scenario to solve',
-      prompt: `Give me a realistic on-the-job scenario for a ${jr?.name || 'trainee'} and walk me through solving it step by step.` },
-    { id: 'voice-prac',icon: Mic,        tone: 'violet',  title: 'Oral practice',       desc: 'Practice speaking key terms',
-      prompt: `Help me practice speaking key technical terms for ${jr?.name || 'my job role'} in English. List 10 words I should know and use them in sentences.` },
-    { id: 'resources', icon: Sparkles,   tone: 'sky',     title: 'Best free resources', desc: 'YouTube + free guides for your course',
-      prompt: `Use web search to find the 5 best free YouTube videos and online resources for someone learning ${jr?.name || 'a skilling course'} in India.` },
+      prompt: 'I have a doubt about my course — can you explain a concept simply?' },
+    { id: 'quiz',      icon: Mic,        tone: 'violet',  title: 'Quick quiz',          desc: '5-question warm-up',
+      prompt: `Quiz me on ${jr?.name || 'my skilling course'} — 5 multiple-choice questions, one at a time, with feedback.` },
   ]
 
   const suggestions = ACTIONS.slice(0, 3).map(a => a.prompt)
 
   return (
     <div className="flex flex-col h-full">
+      {!onCall && (
       <div className="px-5 pt-5 pb-3 bg-gradient-to-br from-primary-light/60 to-white flex-shrink-0">
         <div className="text-[11px] font-bold uppercase tracking-[2px] text-primary">AI Learning Assistant</div>
         <h2 className="text-[20px] font-bold text-txt-primary leading-tight mt-1">Guru ji — your AI tutor</h2>
         <p className="text-[12px] text-txt-secondary mt-1 truncate">{ctxLine}</p>
       </div>
+      )}
 
+      {!onCall && (
       <div className="px-5 py-3 border-b border-bdr-light flex-shrink-0">
         <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary mb-2">Learn faster</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -75,6 +83,7 @@ export default function LearningAssistantCanvas({ context }) {
           <MessageSquare className="w-3 h-3" /> Tap a card to ask immediately — or type your own / start a call.
         </div>
       </div>
+      )}
 
       <div className="flex-1 min-h-0">
         <AvatarCall
@@ -86,6 +95,7 @@ export default function LearningAssistantCanvas({ context }) {
           suggestions={suggestions}
           pendingPrompt={pending}
           threadId={threadId}
+          onCallStateChange={(s) => setOnCall(s !== 'idle')}
         />
       </div>
     </div>

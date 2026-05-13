@@ -14,7 +14,7 @@ const SCHEMA_HINT = `{
 export async function interpretAction({ text, role, language = 'en' }) {
   if (!hasOpenAI()) return null
   const allowed = actionsForRole(role)
-  const system = `You are Swifty, the KSK conversational agent. Classify the user's request into one of the allowed action IDs below.
+  const system = `You are Saathi, the KSK conversational agent. Classify the user's request into one of the allowed action IDs below.
 Allowed actions for role "${role}":
 ${allowed.map(a => `- ${a.id} (${a.module}): ${a.description}`).join('\n')}
 

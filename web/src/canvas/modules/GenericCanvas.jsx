@@ -8,7 +8,7 @@ export default function GenericCanvas({ context }) {
         <Sparkles className="w-7 h-7 text-primary mx-auto mb-2" />
         <div className="font-medium">Module preview · <span className="font-mono text-sm bg-white px-1.5 py-0.5 rounded">{type}</span></div>
         <p className="text-xs text-txt-secondary mt-2 max-w-md mx-auto">
-          The full UI for this module is part of the next build slice. Swifty routed your request here correctly — the
+          The full UI for this module is part of the next build slice. Saathi routed your request here correctly — the
           scaffold, role-gating, and canvas dispatch are all working end-to-end.
         </p>
       </div>

@@ -23,7 +23,7 @@ export async function ragAnswer({ question, role, module = null }) {
   }).filter(x => x.sim >= MIN_SIM).sort((a, b) => b.sim - a.sim).slice(0, 5)
   if (scored.length === 0) return { answer: null, citations: [], reason: 'low_similarity' }
   const context = scored.map(s => `### ${s.c.source}${s.c.heading ? ' — ' + s.c.heading : ''}\n${s.c.content}`).join('\n\n')
-  const sys = `You are Swifty, KSK's conversational policy assistant. Answer the user's question using ONLY the context below.
+  const sys = `You are Saathi, KSK's conversational skilling companion. Answer the user's question using ONLY the context below.
 If the answer is not in the context, say so directly. Be concise (≤4 short sentences). Plain text — no markdown.`
   const ans = await chatText({ system: sys + '\n\nCONTEXT:\n' + context, user: question, temperature: 0.1 })
   const citations = scored.map(s => ({ source: s.c.source, heading: s.c.heading, sim: Number(s.sim.toFixed(3)) }))

@@ -20,7 +20,7 @@ export default function LanguagePage() {
       <div className="p-6 pt-10">
         <div className="text-xs text-txt-secondary uppercase tracking-wider">Step 1 of 2</div>
         <h1 className="text-2xl font-semibold mt-2">Choose your language</h1>
-        <p className="text-sm text-txt-secondary mt-1">Swifty will speak to you in this language.</p>
+        <p className="text-sm text-txt-secondary mt-1">Saathi will speak to you in this language.</p>
       </div>
       <div className="flex-1 grid grid-cols-2 gap-3 px-6 pb-8 content-start">
         {LANGS.map(l => (

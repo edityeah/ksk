@@ -55,7 +55,6 @@ export const ROLE_BOTS = {
     { id: 'learn',           name: 'Learning Assistant',desc: 'AI tutor for course prep and revision',                 icon: '📚', tone: 'emerald', canvas: 'learning_assistant' },
     { id: 'mock_interview',  name: 'Mock Interview',    desc: 'Practice interviews + HR simulations',                  icon: '🎤', tone: 'rose',    canvas: 'mock_interview' },
     { id: 'oral',            name: 'Oral Assessment',   desc: 'Voice-based competency assessment',                     icon: '🗣️', tone: 'orange',  canvas: 'oral_assessment' },
-    { id: 'ocr',             name: 'OCR Exam',          desc: 'Paper exam scan + AI evaluation',                       icon: '📝', tone: 'amber',   canvas: 'ocr_exam' },
     { id: 'jobs',            name: 'Find Jobs',         desc: 'Verified jobs near you, apply with Skill Passport',     icon: '💼', tone: 'teal',    canvas: 'jobs_marketplace' },
     { id: 'placement',       name: 'Confirm Placement', desc: 'Confirm a placement declared by your training partner', icon: '🤝', tone: 'violet',  canvas: 'placement_confirm' },
     { id: 'retention',       name: 'Retention Check-in',desc: 'Day 30/60/90 retention confirmation',                   icon: '📅', tone: 'cyan',    canvas: 'retention_checkin' },

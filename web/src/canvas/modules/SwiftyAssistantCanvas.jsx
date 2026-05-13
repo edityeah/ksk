@@ -8,12 +8,17 @@ import { useApp } from '../../context/AppContext.jsx'
 import { ROLE_LABELS } from '../../roles/roleConfig.js'
 
 const SUGGESTIONS_BY_ROLE = {
+  // Learner / Participant prompts — phrased the way real trainees ask them
+  // (mirrors the Casual English column of the Sample Queries sheet).
   trainee: [
-    'Recommend a skilling course for me',
-    'What jobs are open near my district right now?',
-    'Help me prepare for a retail interview',
-    'Check my stipend status',
-    'Has my placement been verified?',
+    'What courses can I do at my nearest centre?',
+    'How much is my attendance?',
+    "What's my schedule today?",
+    'When will my stipend come?',
+    'Any jobs for my course?',
+    "I want to leave this course",
+    'Download my admit card',
+    'Where do I get my certificate?',
   ],
   trainer: [
     'Today\'s lesson plan for my batch',
@@ -76,14 +81,16 @@ export default function SwiftyAssistantCanvas({ context }) {
   const suggestions = SUGGESTIONS_BY_ROLE[role] || SUGGESTIONS_BY_ROLE.general
 
   return (
-    <AvatarCall
-      persona="general"
-      title="Swifty · KSK Assistant"
-      intro={`Hi ${user?.name?.split(' ')[0] || 'there'} — I can answer questions about KSK, open any module, or help you take action.`}
-      useWebSearch
-      extraSystem={ctx + '\n\nYou are Swifty, the general KSK assistant. Help the user navigate the platform — if they ask about courses, jobs, career advice, interview prep, or learning, suggest opening the relevant module by name (Discover Courses, Find Jobs, Career Counsellor, Mock Interview, Learning Assistant). For policy/scheme questions, answer directly (using web search if needed).'}
-      suggestions={suggestions}
-      threadId={threadId}
-    />
+    <div className="h-full">
+      <AvatarCall
+        persona="general"
+        title="Saathi · Your skilling companion"
+        intro={`Hi ${user?.name?.split(' ')[0] || 'there'} — I can answer questions about KSK, open any module, or help you take action.`}
+        useWebSearch
+        extraSystem={ctx + '\n\nYou are Saathi, the unified KSK companion who walks the learner through enrollment, training, certification and placement. Be warm and practical. If the user asks about courses, jobs, career advice, interview prep, attendance, stipends, certificates or learning, either answer with a card or suggest opening the relevant KSK module by name (Discover Courses, Find Jobs, Career Counsellor, Mock Interview, Learning Assistant, Skill Passport, My Stipend). For policy/scheme questions, answer directly (use web search if needed).'}
+        suggestions={suggestions}
+        threadId={threadId}
+      />
+    </div>
   )
 }

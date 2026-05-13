@@ -27,8 +27,9 @@ export default {
           tertiary:  '#B8C0CC',
         },
         bdr: {
-          DEFAULT: '#E8EDF5',
-          light:   '#F0F4FA',
+          DEFAULT: '#CFD8E6',  // bumped — was too faint to read against white
+          light:   '#E2E8F0',  // soft internal border (cards etc.)
+          strong:  '#B5C2D5',  // structural dividers (sidebar / canvas split)
         },
         ok:    { DEFAULT: '#4CAF50', light: '#E8F5E9' },
         warn:  { DEFAULT: '#FFB300', light: '#FFF8E1' },

@@ -5,19 +5,23 @@ import AvatarCall from '../../components/AvatarCall.jsx'
 import { useApp } from '../../context/AppContext.jsx'
 import { Target, TrendingUp, Map, Award, BadgeCheck, IndianRupee, ChevronRight, MessageSquare } from 'lucide-react'
 
+// Quick-action prompts. Worded the way a real learner / participant would
+// actually ask (mirrors the casual-English / Hinglish samples in the
+// Learner_Participant Sample Queries sheet). Each one triggers a card-shaped
+// response (course_list, eligibility, jobs, etc.) on the server.
 const QUICK_ACTIONS = [
-  { id: 'career-paths',     icon: Map,           tone: 'sky',     title: 'Career paths',      desc: 'Top job roles for your education + interests',
-    prompt: 'Based on my profile, what are the top 5 career paths I should consider over the next 3 years? Include salary ranges and required skills.' },
-  { id: 'skill-gap',        icon: Target,        tone: 'fuchsia', title: 'Skill gap analysis', desc: 'What you have vs what you need',
-    prompt: 'What skills do I have right now versus what I need for the career I want? Tell me 3 concrete things I should learn next.' },
-  { id: 'eligible-schemes', icon: BadgeCheck,    tone: 'emerald', title: 'Eligible schemes',   desc: 'PMKVY / DDU-GKY / NAPS / SIB you qualify for',
-    prompt: 'Which Government of India skilling schemes am I eligible for? Use web search to confirm current eligibility and stipends.' },
-  { id: 'salary',           icon: IndianRupee,   tone: 'amber',   title: 'Salary benchmarks', desc: 'Current pay across roles in your sector',
-    prompt: 'What are current entry-level salaries in India for the roles in my sector? Search the web for 2026 data.' },
-  { id: 'next-course',      icon: Award,         tone: 'violet',  title: 'Next-best course',  desc: 'AI-recommended next step',
-    prompt: 'Recommend the single best skilling course I should take next, given where I am right now. Be specific about provider, duration and outcomes.' },
-  { id: 'progression',      icon: TrendingUp,    tone: 'rose',    title: 'Career progression', desc: '3-year roadmap with checkpoints',
-    prompt: 'Give me a 3-year career roadmap from where I am today: year 1 goal, year 2 goal, year 3 goal. Concrete and realistic.' },
+  { id: 'career-paths',     icon: Map,           tone: 'sky',     title: 'Career paths for me',  desc: 'Top job roles based on my course + profile',
+    prompt: 'Based on my profile, what are the top career paths I should consider? Show me 3-5 roles with salary ranges and required skills.' },
+  { id: 'next-course',      icon: Award,         tone: 'violet',  title: 'What courses can I do after this?',  desc: 'Upskilling pathways from my current track',
+    prompt: 'What other courses can I do after this one? Show me 3 options with duration and where they lead.' },
+  { id: 'jobs-near-me',     icon: TrendingUp,    tone: 'rose',    title: 'Any jobs for my course?', desc: 'Open openings near me',
+    prompt: 'Any jobs for my course near my location? Show me 3-5 with role, employer, CTC and how far.' },
+  { id: 'eligible-schemes', icon: BadgeCheck,    tone: 'emerald', title: 'Schemes I qualify for', desc: 'PMKVY / DDU-GKY / NAPS / SIB',
+    prompt: 'Which Government of India skilling schemes am I eligible for right now? Confirm with current rules.' },
+  { id: 'salary',           icon: IndianRupee,   tone: 'amber',   title: 'Salary benchmarks',     desc: 'What people in my sector earn today',
+    prompt: 'What are current entry-level salaries in my sector across cities? Search the web for the latest figures.' },
+  { id: 'skill-gap',        icon: Target,        tone: 'fuchsia', title: 'Skill gap analysis',    desc: 'What I have vs what the job needs',
+    prompt: 'What skills do I have right now versus what I need for the career I want? Tell me 3 concrete things to learn next.' },
 ]
 
 const TONES = {
@@ -35,6 +39,9 @@ export default function CareerCounsellorCanvas({ context }) {
   // `pending` is fed to AvatarCall as `pendingPrompt` — a fresh object each
   // tap (nonce = timestamp) so re-clicking the same card re-fires the prompt.
   const [pending, setPending] = useState(null)
+  // While on a call, collapse the hero + quick-guidance cards so the call
+  // gets the entire canvas (WhatsApp-style). Text mode keeps the discovery layout.
+  const [onCall, setOnCall] = useState(false)
   const t = meExtra?.trainee
   const ctxLine = t
     ? `${t.education} · ${t.batch?.track?.name || 'not enrolled yet'} · ${t.district || ''}${t.state ? ', ' + t.state : ''}${t.category ? ' · ' + t.category : ''}`
@@ -54,14 +61,17 @@ export default function CareerCounsellorCanvas({ context }) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Hero */}
+      {/* Hero — hidden during a call so the call UI gets the whole canvas. */}
+      {!onCall && (
       <div className="px-5 pt-5 pb-3 bg-gradient-to-br from-primary-light/60 to-white flex-shrink-0">
         <div className="text-[11px] font-bold uppercase tracking-[2px] text-primary">AI Career Counsellor</div>
         <h2 className="text-[20px] font-bold text-txt-primary leading-tight mt-1">Hi {t?.name?.split(' ')[0] || 'there'} — let's plan your career</h2>
         {ctxLine && <p className="text-[12px] text-txt-secondary mt-1 truncate">{ctxLine}</p>}
       </div>
+      )}
 
-      {/* Quick-action cards */}
+      {/* Quick-action cards — hidden during a call. */}
+      {!onCall && (
       <div className="px-5 py-3 border-b border-bdr-light flex-shrink-0">
         <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary mb-2">Quick guidance</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -87,6 +97,7 @@ export default function CareerCounsellorCanvas({ context }) {
           <MessageSquare className="w-3 h-3" /> Tap a card to ask immediately — or type your own question / start a call.
         </div>
       </div>
+      )}
 
       <div className="flex-1 min-h-0">
         <AvatarCall
@@ -98,6 +109,7 @@ export default function CareerCounsellorCanvas({ context }) {
           suggestions={suggestions}
           pendingPrompt={pending}
           threadId={threadId}
+          onCallStateChange={(s) => setOnCall(s !== 'idle')}
         />
       </div>
     </div>
