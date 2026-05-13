@@ -7,7 +7,23 @@ import { useApp } from '../../context/AppContext.jsx'
 import {
   Pencil, Share2, Download, QrCode, Star, Award, Briefcase,
   ShieldCheck, BadgeCheck, AlertCircle, FileText, Plus,
+  Home, MapPin, GraduationCap, Sparkles, Check, X,
 } from 'lucide-react'
+
+// Self-declared profile fields — persisted to localStorage per user. These are
+// optional and help Career Counsellor + Find Jobs personalise better.
+const SELF_KEY = (userId) => `ksk.skillpassport.self.${userId || 'anon'}`
+
+function loadSelf(userId) {
+  try {
+    const raw = localStorage.getItem(SELF_KEY(userId))
+    if (!raw) return {}
+    return JSON.parse(raw) || {}
+  } catch { return {} }
+}
+function saveSelf(userId, data) {
+  try { localStorage.setItem(SELF_KEY(userId), JSON.stringify(data)) } catch {}
+}
 
 const SKILL_LEVEL = (months) => {
   if (months >= 36) return 'Skilled'
@@ -34,7 +50,16 @@ export default function SkillPassportCanvas() {
   const { showToast } = useApp()
   const [me, setMe] = useState(null)
   const [loading, setLoading] = useState(true)
-  useEffect(() => { api.me().then(setMe).finally(() => setLoading(false)) }, [])
+  // Self-declared fields lazy-loaded from localStorage once `me` is known.
+  const [self, setSelf] = useState({})
+  const [editing, setEditing] = useState(false)
+  useEffect(() => {
+    api.me().then(r => {
+      setMe(r)
+      setSelf(loadSelf(r?.user?.id))
+    }).finally(() => setLoading(false))
+  }, [])
+  function persistSelf(next) { setSelf(next); saveSelf(me?.user?.id, next) }
 
   // ── All hooks MUST run before any conditional return ─────────────────────
   const t = me?.trainee
@@ -132,6 +157,51 @@ export default function SkillPassportCanvas() {
             {t.batch?.scheme?.code && <VerPill icon={<BadgeCheck className="w-3 h-3" />} text={`${t.batch.scheme.code} enrolled`} tone="info" />}
             {placements.some(p => p.state === 'verified') && <VerPill icon={<BadgeCheck className="w-3 h-3" />} text="Maker-checker verified" tone="ok" />}
           </div>
+
+          {/* Trust logos — DigiLocker + NSDC official integrations */}
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-bdr-light">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-txt-tertiary">Verified by</span>
+            <LogoBadge name="DigiLocker" subtitle="Govt. of India" tone="amber" />
+            <LogoBadge name="NSDC"       subtitle="Skill India"    tone="primary" />
+            <LogoBadge name="EPFO"       subtitle="Min. of Labour" tone="emerald" optional />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Personal details + preferences (self-declared, optional) ── */}
+      <div className="px-4 mt-4">
+        <div className="rounded-2xl bg-white border border-bdr-light p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary inline-flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-primary" />
+              Personal & Preferences
+              <span className="text-[10px] text-txt-tertiary normal-case font-medium">(self-declared · helps Career Counsellor)</span>
+            </div>
+            <button onClick={() => setEditing(e => !e)} className="text-[12px] font-bold text-primary inline-flex items-center gap-1">
+              {editing ? <><X className="w-3 h-3" /> Done</> : <><Pencil className="w-3 h-3" /> Edit</>}
+            </button>
+          </div>
+          {editing
+            ? <PersonalForm self={self} onChange={persistSelf} />
+            : <PersonalView self={self} />}
+        </div>
+      </div>
+
+      {/* ── Academic background (board exam results) ── */}
+      <div className="px-4 mt-4">
+        <div className="rounded-2xl bg-white border border-bdr-light p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary inline-flex items-center gap-1.5">
+              <GraduationCap className="w-3 h-3 text-violet-700" />
+              Academic background
+            </div>
+            <button onClick={() => setEditing(e => !e)} className="text-[12px] font-bold text-primary inline-flex items-center gap-1">
+              {editing ? <><X className="w-3 h-3" /> Done</> : <><Pencil className="w-3 h-3" /> Edit</>}
+            </button>
+          </div>
+          {editing
+            ? <AcademicForm self={self} onChange={persistSelf} />
+            : <AcademicView self={self} />}
         </div>
       </div>
 
@@ -303,6 +373,195 @@ function EmptyRow({ icon, children }) {
     <div className="flex items-center gap-3 rounded-2xl bg-white border border-dashed border-bdr-light p-3 text-txt-secondary">
       <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">{icon}</div>
       <div className="text-[12px]">{children}</div>
+    </div>
+  )
+}
+
+// ── New: logo badge (Govt-of-India trust signals) ────────────────────────
+const LOGO_TONES = {
+  amber:   { bg: 'bg-amber-100',   fg: 'text-amber-700',   ring: 'ring-amber-300' },
+  primary: { bg: 'bg-primary-light',fg: 'text-primary-dark',ring: 'ring-primary/40' },
+  emerald: { bg: 'bg-emerald-100', fg: 'text-emerald-700', ring: 'ring-emerald-300' },
+}
+function LogoBadge({ name, subtitle, tone = 'primary', optional = false }) {
+  const t = LOGO_TONES[tone] || LOGO_TONES.primary
+  return (
+    <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg ${t.bg} ${t.fg} ring-1 ${t.ring} ${optional ? 'opacity-60' : ''}`}>
+      <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[9px] font-extrabold tracking-tight">{name.slice(0,2)}</div>
+      <div className="leading-tight">
+        <div className="text-[10px] font-bold uppercase tracking-wider">{name}</div>
+        <div className="text-[9px] opacity-70">{subtitle}</div>
+      </div>
+      {!optional && <Check className="w-3 h-3 ml-0.5" />}
+    </div>
+  )
+}
+
+// ── Personal & Preferences ───────────────────────────────────────────────
+function PersonalView({ self }) {
+  const empty = !self.hometown && !self.currentLocation && !(self.preferredSkills?.length) && !(self.preferredLocations?.length)
+  if (empty) return (
+    <div className="text-[12px] text-txt-tertiary py-2">
+      Add a few details — Career Counsellor + Find Jobs use these to give you better recommendations.
+    </div>
+  )
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px]">
+      <KV icon={Home}    label="Hometown"          value={self.hometown} />
+      <KV icon={MapPin}  label="Current location"  value={self.currentLocation} />
+      <KV icon={Sparkles} label="Preferred skills"  value={(self.preferredSkills || []).join(', ')} fullWidth />
+      <KV icon={MapPin}  label="Preferred work locations" value={(self.preferredLocations || []).join(', ')} fullWidth />
+    </div>
+  )
+}
+function KV({ icon: Icon, label, value, fullWidth }) {
+  return (
+    <div className={fullWidth ? 'sm:col-span-2' : ''}>
+      <div className="text-[10px] uppercase tracking-wider font-bold text-txt-tertiary inline-flex items-center gap-1">
+        <Icon className="w-3 h-3" />{label}
+      </div>
+      <div className="text-[13px] text-txt-primary">{value || <span className="text-txt-tertiary italic font-normal">not set</span>}</div>
+    </div>
+  )
+}
+function PersonalForm({ self, onChange }) {
+  const update = (patch) => onChange({ ...self, ...patch })
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <Field label="Hometown (district, state)" icon={Home}
+        value={self.hometown || ''} onChange={v => update({ hometown: v })} placeholder="e.g. Patna, Bihar" />
+      <Field label="Current location" icon={MapPin}
+        value={self.currentLocation || ''} onChange={v => update({ currentLocation: v })} placeholder="e.g. Pune, Maharashtra" />
+      <ChipList label="Preferred skill areas" icon={Sparkles}
+        items={self.preferredSkills || []}
+        onChange={list => update({ preferredSkills: list })}
+        placeholder="e.g. Electrician, Solar PV"
+        suggestions={['Electrician','Solar PV','Welder','Fitter','BPO / Customer Care','Retail','Healthcare','Beauty & Wellness','Tailoring','Auto-Mechanic']}
+        fullWidth />
+      <ChipList label="Preferred work locations" icon={MapPin}
+        items={self.preferredLocations || []}
+        onChange={list => update({ preferredLocations: list })}
+        placeholder="e.g. Bengaluru, Delhi NCR"
+        fullWidth />
+    </div>
+  )
+}
+
+// ── Academic background ──────────────────────────────────────────────────
+function AcademicView({ self }) {
+  const e10 = self.exam10, e12 = self.exam12
+  if (!e10 && !e12) return (
+    <div className="text-[12px] text-txt-tertiary py-2">
+      Add your Class 10 / Class 12 board results — helps surface RPL + eligibility-based course matches.
+    </div>
+  )
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[13px]">
+      <ExamCard label="Class 10" exam={e10} />
+      <ExamCard label="Class 12" exam={e12} />
+    </div>
+  )
+}
+function ExamCard({ label, exam }) {
+  if (!exam) return (
+    <div className="rounded-xl border border-dashed border-bdr-light p-3 text-[12px] text-txt-tertiary">{label}: not set</div>
+  )
+  return (
+    <div className="rounded-xl bg-violet-50/40 border border-violet-100 p-3">
+      <div className="text-[10px] uppercase tracking-wider font-bold text-violet-700">{label}</div>
+      <div className="font-bold text-[14px] text-txt-primary mt-0.5">{exam.board || 'Board not set'}</div>
+      <div className="text-[11px] text-txt-secondary">
+        {exam.year ? `Passed ${exam.year}` : 'Year not set'}{exam.percentage ? ` · ${exam.percentage}%` : ''}{exam.stream ? ` · ${exam.stream}` : ''}
+      </div>
+    </div>
+  )
+}
+function AcademicForm({ self, onChange }) {
+  const update = (patch) => onChange({ ...self, ...patch })
+  const e10 = self.exam10 || {}
+  const e12 = self.exam12 || {}
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <ExamForm label="Class 10" exam={e10} onChange={(e) => update({ exam10: e })} />
+      <ExamForm label="Class 12" exam={e12} onChange={(e) => update({ exam12: e })} showStream />
+    </div>
+  )
+}
+function ExamForm({ label, exam, onChange, showStream }) {
+  const set = (patch) => onChange({ ...exam, ...patch })
+  return (
+    <div className="rounded-xl border border-bdr-light p-3 space-y-2">
+      <div className="text-[10px] uppercase tracking-wider font-bold text-violet-700">{label}</div>
+      <Field label="Board" value={exam.board || ''} onChange={v => set({ board: v })} placeholder="e.g. CBSE, ICSE, Bihar Board" />
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Year passed" value={exam.year || ''} onChange={v => set({ year: v })} placeholder="2024" />
+        <Field label="Percentage" value={exam.percentage || ''} onChange={v => set({ percentage: v })} placeholder="78" suffix="%" />
+      </div>
+      {showStream && (
+        <Field label="Stream" value={exam.stream || ''} onChange={v => set({ stream: v })} placeholder="Science / Commerce / Arts / Vocational" />
+      )}
+    </div>
+  )
+}
+
+// ── Tiny form primitives ─────────────────────────────────────────────────
+function Field({ label, icon: Icon, value, onChange, placeholder, suffix, fullWidth }) {
+  return (
+    <label className={fullWidth ? 'sm:col-span-2 block' : 'block'}>
+      <div className="text-[10px] uppercase tracking-wider font-bold text-txt-tertiary inline-flex items-center gap-1 mb-1">
+        {Icon && <Icon className="w-3 h-3" />}{label}
+      </div>
+      <div className="flex items-center gap-1 rounded-lg border border-bdr px-2 focus-within:border-primary">
+        <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+          className="flex-1 bg-transparent py-1.5 text-[13px] outline-none" />
+        {suffix && <span className="text-[11px] text-txt-tertiary">{suffix}</span>}
+      </div>
+    </label>
+  )
+}
+function ChipList({ label, icon: Icon, items, onChange, placeholder, suggestions = [], fullWidth }) {
+  const [input, setInput] = useState('')
+  function add(v) {
+    const t = (v || '').trim()
+    if (!t || items.includes(t)) return
+    onChange([...items, t])
+    setInput('')
+  }
+  function remove(t) { onChange(items.filter(x => x !== t)) }
+  const avail = suggestions.filter(s => !items.includes(s))
+  return (
+    <div className={fullWidth ? 'sm:col-span-2' : ''}>
+      <div className="text-[10px] uppercase tracking-wider font-bold text-txt-tertiary inline-flex items-center gap-1 mb-1">
+        {Icon && <Icon className="w-3 h-3" />}{label}
+      </div>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {items.map(t => (
+          <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-pill bg-primary text-white text-[11px] font-bold">
+            {t}
+            <button onClick={() => remove(t)} className="hover:bg-white/20 rounded-full w-3 h-3 flex items-center justify-center">
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+        {items.length === 0 && <span className="text-[11px] text-txt-tertiary italic">none yet</span>}
+      </div>
+      <div className="flex items-center gap-1 rounded-lg border border-bdr px-2 focus-within:border-primary">
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(input) } }}
+          placeholder={placeholder}
+          className="flex-1 bg-transparent py-1.5 text-[13px] outline-none" />
+        <button onClick={() => add(input)} disabled={!input.trim()}
+          className="text-[11px] font-bold text-primary disabled:opacity-40">Add</button>
+      </div>
+      {avail.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1.5">
+          {avail.slice(0, 6).map(s => (
+            <button key={s} onClick={() => add(s)} className="text-[10px] px-2 py-0.5 rounded-pill border border-bdr-light text-txt-secondary hover:border-primary hover:text-primary">
+              + {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

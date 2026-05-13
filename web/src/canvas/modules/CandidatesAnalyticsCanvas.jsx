@@ -1,11 +1,15 @@
-// Candidates — mirrors NSDC Academy "Candidates" tab.
-// Demographic + drill breakdowns: gender, age, category, by state, by sector,
-// by top TPs, by courses. Saathi handles drilldowns.
+// Enrollments — mirrors NSDC Academy "Candidates" tab, but the entry-point
+// concept is now ENROLLMENTS (candidates IS the enrollment record). Adds a
+// scheme filter at the top so the NSDC officer can scope to PMKVY / DDU-GKY /
+// NAPS / PM Vishwakarma / SIB / RPL / etc.
 
+import { useState } from 'react'
 import KpiGridCard    from '../../components/cards/KpiGridCard.jsx'
 import BarChartCard   from '../../components/cards/BarChartCard.jsx'
 import DonutChartCard from '../../components/cards/DonutChartCard.jsx'
 import AnalystCanvasShell from './_AnalystCanvasShell.jsx'
+import SchemeFilterBar, { schemeLabel } from '../../components/SchemeFilterBar.jsx'
+import { SCHEME_ENROLLMENT } from './_schemeData.js'
 
 const HEADLINE = {
   title: 'Candidate base · 27.74 L enrolled',
@@ -137,20 +141,39 @@ const QUICK_ASKS = [
   'Bottom 10 states by enrolment — where do we open new centres?',
 ]
 
+// Build a per-scheme HEADLINE card on the fly.
+function headlineForScheme(scheme) {
+  const d = SCHEME_ENROLLMENT[scheme] || SCHEME_ENROLLMENT.all
+  return {
+    title: `Enrollment funnel · ${schemeLabel(scheme)}`,
+    items: [
+      { label: 'Enrolled',  value: d.enrolled.toLocaleString('en-IN'),  tone: 'primary' },
+      { label: 'Trained',   value: d.trained.toLocaleString('en-IN'),   tone: 'sky' },
+      { label: 'Certified', value: d.certified.toLocaleString('en-IN'), tone: 'emerald' },
+      { label: 'Placed',    value: d.placed.toLocaleString('en-IN'),    tone: 'amber',
+        delta: `${Math.round((d.placed / Math.max(d.trained, 1)) * 100)}% from trained` },
+    ],
+  }
+}
+
 export default function CandidatesAnalyticsCanvas({ context }) {
+  const [scheme, setScheme] = useState('all')
+  const schemeHeadline = headlineForScheme(scheme)
   return (
     <AnalystCanvasShell
-      eyebrow="NSDC ACADEMY · CANDIDATES"
-      title="27,74,408 candidates · the funnel starts here"
-      subtitle="Drill by gender, age, category, state, sector, TP, course."
+      eyebrow="NSDC ACADEMY · ENROLLMENTS"
+      title={`Enrollments · ${schemeLabel(scheme)}`}
+      subtitle="Scoped by scheme. Drill by gender, age, category, state, sector, TP, course."
       toneClass="from-violet-100/60 via-white to-white"
       refreshedOn="06/05/2026"
       dataMartOn="02/05/2026"
-      saathiTitle="Saathi · Candidates"
-      saathiContext="The user is inside the Candidates module. Default to candidate-level questions — demographics, drop-outs, state/district drilldowns, course choice patterns. For TP-level questions suggest opening Training Partners."
+      saathiTitle="Saathi · Enrollments"
+      saathiContext={`The user is inside the Enrollments module. Active scheme: ${schemeLabel(scheme)}. Scope every analytical answer to this scheme — quote the scheme name in your opening sentence. For TP-level drilldowns suggest opening Training Partners; for placement drilldowns suggest Placement.`}
       threadId={context?.threadId}
+      filterSlot={<SchemeFilterBar value={scheme} onChange={setScheme} />}
       cells={[
-        { node: <KpiGridCard card={HEADLINE} />,       prompt: 'Walk me through the candidate footprint and any demographic gaps.' },
+        { node: <KpiGridCard card={schemeHeadline} />, prompt: `Walk me through the ${schemeLabel(scheme)} enrolment funnel and flag the biggest leak.` },
+        { node: <KpiGridCard card={HEADLINE} />,       prompt: 'Walk me through the all-scheme candidate footprint and any demographic gaps.' },
         { node: <DonutChartCard card={BY_GENDER} />,   prompt: 'Female enrolment is 43.3% — by sector, where are women under-represented?',  span: 'half' },
         { node: <BarChartCard card={BY_AGE} />,        prompt: 'Age breakdown — where is the 40-59 RPL opportunity strongest?',              span: 'half' },
         { node: <DonutChartCard card={BY_CATEGORY} />, prompt: 'Not-disclosed is 47% — propose a TP-side data-quality fix and broadcast.',   span: 'half' },

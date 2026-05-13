@@ -31,6 +31,7 @@ export default function AnalystCanvasShell({
   // Body
   cells = [],                // array of { node: ReactNode, prompt: string, span?: 'full' | 'half' }
   quickAsks = [],            // array of strings — pre-written analyst prompts
+  filterSlot,                // optional React node rendered as a sticky filter row under the hero
   // Saathi
   persona = 'general',
   saathiTitle = 'Saathi',
@@ -70,6 +71,13 @@ export default function AnalystCanvasShell({
             </div>
           )}
         </div>
+
+        {/* Optional filter row (e.g. scheme filter) pinned below the hero. */}
+        {filterSlot && (
+          <div className="px-5 py-2.5 bg-white border-b border-bdr-light">
+            {filterSlot}
+          </div>
+        )}
 
         {/* "Try asking" lives ONLY in the chat panel — not duplicated here.
             The dashboard is the data canvas; the chat is where you talk to it. */}

@@ -12,6 +12,7 @@ import TypingIndicator from '../components/TypingIndicator.jsx'
 import { Bell, LogOut, Plus, Search, Sparkles, Send, Mic, Phone, ChevronUp, ChevronRight, MessageSquare, Menu } from 'lucide-react'
 import CanvasPanel from '../canvas/CanvasPanel.jsx'
 import FloatingCallPill from '../components/FloatingCallPill.jsx'
+import AiCreditsBadge from '../components/AiCreditsBadge.jsx'
 
 const TONES = {
   indigo:  { bg: 'bg-indigo-100',  fg: 'text-indigo-600',  ring: 'hover:border-indigo-300' },
@@ -147,6 +148,7 @@ function Shell({ mobile }) {
           </button>
           <div className="flex items-center gap-2 md:gap-3">
             <FloatingCallPill />
+            <AiCreditsBadge />
             <SaathiQuickButton openCanvas={ctx.openCanvas} />
             <BellButton />
           </div>
@@ -285,15 +287,22 @@ function GreetingPanel({ ctx, bots, chips, onSend, onPickBot }) {
           </div>
         </div>
 
-        <div className="mt-12">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <div className="text-[12px] font-bold uppercase tracking-[2px] text-primary">Open an app</div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {bots.map(b => <FeatureCard key={b.id} bot={b} onClick={() => onPickBot(b)} />)}
-          </div>
-        </div>
+        {/* When tiles have `section` metadata, render them in three grouped
+            blocks (My Skill Passport / Employment Confirmation / Other Services).
+            Otherwise fall back to the flat grid (used by all non-trainee roles). */}
+        {bots.some(b => b.section)
+          ? <SectionedAppGrid bots={bots} onPickBot={onPickBot} />
+          : (
+            <div className="mt-12">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <div className="text-[12px] font-bold uppercase tracking-[2px] text-primary">Open an app</div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {bots.map(b => <FeatureCard key={b.id} bot={b} onClick={() => onPickBot(b)} />)}
+              </div>
+            </div>
+          )}
 
         {chips.length > 0 && (
           <div className="mt-10">
@@ -309,6 +318,40 @@ function GreetingPanel({ ctx, bots, chips, onSend, onPickBot }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Three-section app grid for learner role — matches the funder demo's
+// "bot works across 3 stages of life" narrative.
+const SECTION_META = {
+  passport:   { title: 'My Skill Passport',       subtitle: 'Identity, certificates, profile',                 accent: 'from-sky-50 to-white',     ring: 'ring-sky-200',     dot: 'bg-sky-500' },
+  employment: { title: 'Employment Confirmation', subtitle: 'Placement, retention, payslip, grievances',       accent: 'from-emerald-50 to-white', ring: 'ring-emerald-200', dot: 'bg-emerald-500' },
+  other:      { title: 'Other Services',          subtitle: 'Discover courses, AI coach, jobs, alerts',        accent: 'from-violet-50 to-white',  ring: 'ring-violet-200',  dot: 'bg-violet-500' },
+}
+const SECTION_ORDER = ['passport', 'employment', 'other']
+
+function SectionedAppGrid({ bots, onPickBot }) {
+  const grouped = SECTION_ORDER.map(key => ({ key, meta: SECTION_META[key], tiles: bots.filter(b => b.section === key) }))
+                               .filter(g => g.tiles.length > 0)
+  return (
+    <div className="mt-10 space-y-6">
+      {grouped.map(({ key, meta, tiles }, idx) => (
+        <section key={key} className={`rounded-2xl bg-gradient-to-br ${meta.accent} border border-bdr-light ring-1 ${meta.ring}/40 p-4`}>
+          <div className="flex items-baseline justify-between mb-3">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[2px] text-primary inline-flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+                Stage {idx + 1} · {meta.title}
+              </div>
+              <div className="text-[12px] text-txt-secondary mt-0.5">{meta.subtitle}</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {tiles.map(b => <FeatureCard key={b.id} bot={b} onClick={() => onPickBot(b)} />)}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }

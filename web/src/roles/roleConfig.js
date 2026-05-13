@@ -49,21 +49,26 @@ export const ROLE_HOME_LAYOUT = {
 
 export const ROLE_BOTS = {
   trainee: [
-    { id: 'skill_passport',  name: 'Skill Passport',    desc: 'Verifiable digital resume + QR for employers',          icon: '🪪', tone: 'sky',     canvas: 'skill_passport' },
-    { id: 'discover',        name: 'Discover Courses',  desc: 'Browse skilling courses, ITIs and Skill Centres',       icon: '🧭', tone: 'indigo',  canvas: 'course_discovery' },
-    { id: 'career',          name: 'Career Counsellor', desc: 'AI guidance on roles, salary ranges and pathways',      icon: '🎯', tone: 'fuchsia', canvas: 'career_counsellor' },
-    { id: 'learn',           name: 'Learning Assistant',desc: 'AI tutor for course prep and revision',                 icon: '📚', tone: 'emerald', canvas: 'learning_assistant' },
-    { id: 'mock_interview',  name: 'Mock Interview',    desc: 'Practice interviews + HR simulations',                  icon: '🎤', tone: 'rose',    canvas: 'mock_interview' },
-    { id: 'oral',            name: 'Oral Assessment',   desc: 'Voice-based competency assessment',                     icon: '🗣️', tone: 'orange',  canvas: 'oral_assessment' },
-    { id: 'jobs',            name: 'Find Jobs',         desc: 'Verified jobs near you, apply with Skill Passport',     icon: '💼', tone: 'teal',    canvas: 'jobs_marketplace' },
-    { id: 'placement',       name: 'Confirm Placement', desc: 'Confirm a placement declared by your training partner', icon: '🤝', tone: 'violet',  canvas: 'placement_confirm' },
-    { id: 'retention',       name: 'Retention Check-in',desc: 'Day 30/60/90 retention confirmation',                   icon: '📅', tone: 'cyan',    canvas: 'retention_checkin' },
-    { id: 'payslip',         name: 'Upload Payslip',    desc: 'OCR-verified salary slips → DigiLocker',                icon: '🧾', tone: 'lime',    canvas: 'salary_slip' },
-    { id: 'stipend',         name: 'Stipend Status',    desc: 'NAPS / DBT stipend disbursals + UTR',                   icon: '💸', tone: 'pink',    canvas: 'stipend_status' },
-    { id: 'certs',           name: 'My Certificates',   desc: 'NSQF certifications stored in DigiLocker',              icon: '🏅', tone: 'amber',   canvas: 'skill_passport' },
-    { id: 'updates',         name: 'Updates & Alerts',  desc: 'Scheme announcements, deadlines, reminders',            icon: '🔔', tone: 'indigo',  canvas: 'notifications' },
-    { id: 'grievance',       name: 'Grievance',         desc: 'File and track grievances with NSDC',                   icon: '🆘', tone: 'rose',    canvas: 'grievance' },
-    { id: 'profile',         name: 'My Profile',        desc: 'Aadhaar, APAAR, DigiLocker links and KYC',              icon: '👤', tone: 'sky',     canvas: 'skill_passport' },
+    // ── Section 1: My Skill Passport (profile, identity, certs)
+    { id: 'skill_passport',  name: 'Skill Passport',    desc: 'Verifiable digital resume + QR for employers',          icon: '🪪', tone: 'sky',     canvas: 'skill_passport', section: 'passport' },
+    { id: 'certs',           name: 'My Certificates',   desc: 'NSQF certifications stored in DigiLocker',              icon: '🏅', tone: 'amber',   canvas: 'skill_passport', section: 'passport' },
+    { id: 'profile',         name: 'My Profile',        desc: 'Aadhaar, APAAR, DigiLocker links and KYC',              icon: '👤', tone: 'indigo',  canvas: 'skill_passport', section: 'passport' },
+
+    // ── Section 2: Employment Confirmation (the funder-demo critical path)
+    { id: 'placement',       name: 'Confirm Placement', desc: 'Confirm a placement declared by your training partner', icon: '🤝', tone: 'violet',  canvas: 'placement_confirm', section: 'employment' },
+    { id: 'retention',       name: 'Retention Check-in',desc: 'Day 30/60/90 retention confirmation',                   icon: '📅', tone: 'cyan',    canvas: 'retention_checkin', section: 'employment' },
+    { id: 'payslip',         name: 'Upload Payslip',    desc: 'OCR-verified salary slips → DigiLocker',                icon: '🧾', tone: 'lime',    canvas: 'salary_slip',       section: 'employment' },
+    { id: 'grievance',       name: 'Grievance',         desc: 'File and track grievances with NSDC',                   icon: '🆘', tone: 'rose',    canvas: 'grievance',         section: 'employment' },
+
+    // ── Section 3: Other Services (discovery + AI tutoring + jobs)
+    { id: 'discover',        name: 'Discover Courses',  desc: 'Browse skilling courses, ITIs and Skill Centres',       icon: '🧭', tone: 'indigo',  canvas: 'course_discovery',  section: 'other' },
+    { id: 'career',          name: 'Career Counsellor', desc: 'AI guidance on roles, salary ranges and pathways',      icon: '🎯', tone: 'fuchsia', canvas: 'career_counsellor', section: 'other' },
+    { id: 'learn',           name: 'Learning Assistant',desc: 'AI tutor for course prep and revision',                 icon: '📚', tone: 'emerald', canvas: 'learning_assistant',section: 'other' },
+    { id: 'mock_interview',  name: 'Mock Interview',    desc: 'Practice interviews + HR simulations',                  icon: '🎤', tone: 'rose',    canvas: 'mock_interview',    section: 'other' },
+    { id: 'oral',            name: 'Oral Assessment',   desc: 'Voice-based competency assessment',                     icon: '🗣️', tone: 'orange',  canvas: 'oral_assessment',   section: 'other' },
+    { id: 'jobs',            name: 'Find Jobs',         desc: 'Verified jobs near you, apply with Skill Passport',     icon: '💼', tone: 'teal',    canvas: 'jobs_marketplace',  section: 'other' },
+    { id: 'stipend',         name: 'Stipend Status',    desc: 'NAPS / DBT stipend disbursals + UTR',                   icon: '💸', tone: 'pink',    canvas: 'stipend_status',    section: 'other' },
+    { id: 'updates',         name: 'Updates & Alerts',  desc: 'Scheme announcements, deadlines, reminders',            icon: '🔔', tone: 'indigo',  canvas: 'notifications',     section: 'other' },
   ],
   trainer: [
     { id: 'attendance', name: 'Mark Attendance',    desc: 'Today\'s batch attendance with maker-checker',        icon: '🗓️', tone: 'amber',   canvas: 'attendance' },
@@ -88,15 +93,18 @@ export const ROLE_BOTS = {
     { id: 'updates',     name: 'Updates & Alerts',     desc: 'Scheme announcements, accreditation notices',        icon: '🔔', tone: 'pink',    canvas: 'notifications' },
   ],
   training_partner: [
-    { id: 'rollup',         name: 'Multi-Centre Rollup',  desc: 'Outcomes across all your centres in one view',       icon: '🏢', tone: 'indigo',  canvas: 'tp_rollup' },
-    { id: 'tracks',         name: 'Track Designer',       desc: 'Build training tracks combining job roles + schemes',icon: '🧩', tone: 'fuchsia', canvas: 'track_designer' },
-    { id: 'scheme_alloc',   name: 'Scheme Allocation',    desc: 'Allocate batches to PMKVY, DDU-GKY, NAPS, …',        icon: '🎯', tone: 'amber',   canvas: 'scheme_allocation' },
-    { id: 'placement',      name: 'Placements',           desc: 'Declare placements and track verification states',   icon: '🤝', tone: 'violet',  canvas: 'placement_declare' },
-    { id: 'cert_pipe',      name: 'Certification Pipeline',desc: 'Enrolment → certification across all centres',      icon: '🎓', tone: 'emerald', canvas: 'cert_pipeline' },
-    { id: 'quality',        name: 'Quality Index',        desc: 'Centre health score, anomalies and alerts',          icon: '🏆', tone: 'sky',     canvas: 'quality_index' },
-    { id: 'at_risk',        name: 'At-Risk Trainees',     desc: 'High-risk trainees across centres',                  icon: '⚠️', tone: 'rose',    canvas: 'at_risk' },
-    { id: 'batches',        name: 'All Batches',          desc: 'Active and planned batches org-wide',                icon: '📚', tone: 'teal',    canvas: 'batches' },
-    { id: 'updates',        name: 'Updates & Alerts',     desc: 'Scheme changes, accreditation, broadcasts',          icon: '🔔', tone: 'pink',    canvas: 'notifications' },
+    // ── Core analytic stack (mirrors NSDC Officer reorder: rollup → enrol → cert → place → retain → schemes)
+    { id: 'rollup',       name: 'Multi-Centre Rollup', desc: 'Outcomes across all your centres in one view',         icon: '🏢', tone: 'indigo',  canvas: 'tp_rollup' },
+    { id: 'enrollment',   name: 'Enrolment',           desc: 'Across centres, tracks and schemes',                   icon: '👥', tone: 'violet',  canvas: 'tp_enrollment' },
+    { id: 'certification',name: 'Certification',       desc: 'Trained → assessed → certified pipeline',              icon: '🎓', tone: 'emerald', canvas: 'tp_certification' },
+    { id: 'placement',    name: 'Placements',          desc: 'Filing pipeline + verification states',                icon: '🤝', tone: 'rose',    canvas: 'tp_placement' },
+    { id: 'retention',    name: 'Retention',           desc: 'D30 / D60 / D90 cohort retention by centre',           icon: '🔁', tone: 'cyan',    canvas: 'tp_retention' },
+    { id: 'schemes',      name: 'Schemes',             desc: 'Schemes you run and compliance status',                icon: '🪙', tone: 'amber',   canvas: 'tp_schemes' },
+    // ── Operational
+    { id: 'declare',      name: 'Declare Placement',   desc: 'Declare placements for verified trainees',             icon: '📝', tone: 'fuchsia', canvas: 'placement_declare' },
+    { id: 'at_risk',      name: 'At-Risk Trainees',    desc: 'High-risk trainees across centres',                    icon: '⚠️', tone: 'amber',   canvas: 'at_risk' },
+    { id: 'batches',      name: 'All Batches',         desc: 'Active and planned batches org-wide',                  icon: '📚', tone: 'teal',    canvas: 'batches' },
+    { id: 'updates',      name: 'Updates & Alerts',    desc: 'Scheme changes, accreditation, broadcasts',            icon: '🔔', tone: 'pink',    canvas: 'notifications' },
   ],
   assessor: [
     { id: 'queue',     name: 'Assessment Queue', desc: 'Today\'s and upcoming assessments assigned to you', icon: '🧾', tone: 'indigo',  canvas: 'assessment_queue' },
@@ -122,19 +130,21 @@ export const ROLE_BOTS = {
     { id: 'updates',    name: 'Updates & Alerts',     desc: 'Pending confirmations, broadcasts',              icon: '🔔', tone: 'pink',    canvas: 'notifications' },
   ],
   nsdc_officer: [
-    // ── NSDC Academy dashboards — one tile per Power BI tab ──
-    { id: 'overview',          name: 'National Overview',  desc: 'NSDC Academy · 11 hero KPIs + 3-year funnel',         icon: '🇮🇳', tone: 'indigo',  canvas: 'national_overview' },
+    // ── Top row: the 3-stage life-cycle view the funder cares most about ──
+    { id: 'overview',          name: 'National Overview',  desc: 'NSDC Academy · headline KPIs across all schemes',     icon: '🇮🇳', tone: 'indigo',  canvas: 'national_overview' },
+    { id: 'enrollments',       name: 'Enrollments',        desc: 'Candidates enrolled · by scheme, state, sector',      icon: '👥', tone: 'violet',  canvas: 'candidates_analytics' },
+    { id: 'placement',         name: 'Placement',          desc: 'Placement funnel + 3-signal verification',            icon: '🤝', tone: 'pink',    canvas: 'placement_dashboard' },
+    { id: 'retention',         name: 'Retention',          desc: 'Day 30/60/90 retention with confidence score',        icon: '🔁', tone: 'lime',    canvas: 'retention_dashboard' },
+    // ── Operations & partners ──
     { id: 'training_partners', name: 'Training Partners',  desc: '587 TPs · audit, broadcast, drilldown',               icon: '🏢', tone: 'sky',     canvas: 'training_partners' },
-    { id: 'candidates',        name: 'Candidates',         desc: '27.74 L candidates · demographics + drill',           icon: '👥', tone: 'violet',  canvas: 'candidates_analytics' },
     { id: 'batches',           name: 'Batches',            desc: '5.9 L batches · throughput + scheme split',           icon: '📚', tone: 'amber',   canvas: 'batches_analytics' },
     { id: 'sectors',           name: 'Sectors',            desc: '37 sectors · E/T/A/C funnel per sector',              icon: '📊', tone: 'emerald', canvas: 'sectors_analytics' },
     { id: 'outcomes',          name: 'Outcomes',           desc: 'Placement, women, assessment quality',                icon: '🎯', tone: 'fuchsia', canvas: 'outcomes' },
+    { id: 'apprenticeships',   name: 'Apprenticeships',    desc: 'NAPS · 51 L apprentices · 7-tab dashboard',           icon: '🛠️', tone: 'orange',  canvas: 'apprenticeships' },
     { id: 'war_room',          name: 'War Room',           desc: 'Live anomalies · investigate + act',                  icon: '🚨', tone: 'rose',    canvas: 'war_room' },
-    // ── Existing operational modules ──
+    // ── Long-tail ──
     { id: 'heatmap',           name: 'India Heatmap',      desc: 'State and district performance heatmap',              icon: '🗺️', tone: 'teal',    canvas: 'india_heatmap' },
     { id: 'cert',              name: 'Certification',      desc: 'National certification pipeline and delays',          icon: '🎓', tone: 'orange',  canvas: 'cert_dashboard' },
-    { id: 'placement',         name: 'Placement',          desc: 'Placement funnel + maker-checker verification',       icon: '🤝', tone: 'pink',    canvas: 'placement_dashboard' },
-    { id: 'retention',         name: 'Retention',          desc: 'Cohort retention by milestone, risk surface',         icon: '🔁', tone: 'lime',    canvas: 'retention_dashboard' },
     { id: 'schemes',           name: 'Scheme Analytics',   desc: 'PMKVY / DDU-GKY / NAPS / SIB / PM Vishwakarma',       icon: '🪙', tone: 'cyan',    canvas: 'scheme_analytics' },
     { id: 'broadcast',         name: 'Broadcast',          desc: 'Send targeted broadcasts to roles / states',          icon: '📣', tone: 'fuchsia', canvas: 'broadcast' },
     { id: 'reports',           name: 'Reports',            desc: 'Parliamentary, CEO, monthly outcome reports',         icon: '📄', tone: 'indigo',  canvas: 'national_overview' },
@@ -221,11 +231,11 @@ export const ROLE_CANVASES = {
   trainee: ['skill_passport', 'course_discovery', 'career_counsellor', 'learning_assistant', 'oral_assessment', 'ocr_exam', 'mock_interview', 'jobs_marketplace', 'placement_confirm', 'retention_checkin', 'salary_slip', 'stipend_status', 'grievance', 'notifications'],
   trainer: ['attendance', 'lesson_delivery', 'quiz', 'at_risk', 'notifications'],
   training_centre: ['centre_dashboard', 'batches', 'cert_pipeline', 'placement_declare', 'inspection', 'at_risk', 'notifications'],
-  training_partner: ['tp_rollup', 'track_designer', 'scheme_allocation', 'placement_declare', 'quality_index', 'batches', 'at_risk', 'cert_pipeline', 'notifications'],
+  training_partner: ['tp_rollup', 'tp_enrollment', 'tp_certification', 'tp_placement', 'tp_retention', 'tp_schemes', 'placement_declare', 'batches', 'at_risk', 'notifications'],
   assessor: ['assessment_queue', 'live_assessment', 'notifications'],
   ssc: ['accreditation', 'standards', 'sector_outcomes', 'broadcast', 'notifications'],
   employer: ['employer_confirm', 'retention_confirm', 'my_hires', 'post_job', 'notifications'],
-  nsdc_officer: ['national_overview', 'training_partners', 'candidates_analytics', 'batches_analytics', 'sectors_analytics', 'outcomes', 'war_room', 'india_heatmap', 'cert_dashboard', 'placement_dashboard', 'retention_dashboard', 'scheme_analytics', 'broadcast', 'notifications'],
+  nsdc_officer: ['national_overview', 'candidates_analytics', 'placement_dashboard', 'retention_dashboard', 'training_partners', 'batches_analytics', 'sectors_analytics', 'outcomes', 'apprenticeships', 'war_room', 'india_heatmap', 'cert_dashboard', 'scheme_analytics', 'broadcast', 'notifications'],
   funder: ['funder_outcomes', 'money_outcomes', 'scheme_analytics', 'notifications'],
   stipend_officer: ['stipend_queue', 'stipend_retry', 'notifications'],
 }

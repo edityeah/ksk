@@ -29,6 +29,14 @@ import BatchesAnalyticsCanvas from './BatchesAnalyticsCanvas.jsx'
 import SectorsAnalyticsCanvas from './SectorsAnalyticsCanvas.jsx'
 import OutcomesCanvas from './OutcomesCanvas.jsx'
 import WarRoomCanvas from './WarRoomCanvas.jsx'
+import ApprenticeshipsCanvas from './ApprenticeshipsCanvas.jsx'
+// Training Partner module set
+import TpMultiCenterCanvas from './TpMultiCenterCanvas.jsx'
+import TpEnrollmentCanvas from './TpEnrollmentCanvas.jsx'
+import TpCertificationCanvas from './TpCertificationCanvas.jsx'
+import TpPlacementCanvas from './TpPlacementCanvas.jsx'
+import TpRetentionCanvas from './TpRetentionCanvas.jsx'
+import TpSchemesCanvas from './TpSchemesCanvas.jsx'
 import GenericCanvas from './GenericCanvas.jsx'
 
 export const CANVAS_MODULES = {
@@ -64,7 +72,16 @@ export const CANVAS_MODULES = {
   sectors_analytics:    SectorsAnalyticsCanvas,
   outcomes:             OutcomesCanvas,
   war_room:             WarRoomCanvas,
+  apprenticeships:      ApprenticeshipsCanvas,
   notifications:        NotificationsCanvas,
+
+  // Training Partner module set
+  tp_rollup:            TpMultiCenterCanvas,
+  tp_enrollment:        TpEnrollmentCanvas,
+  tp_certification:     TpCertificationCanvas,
+  tp_placement:         TpPlacementCanvas,
+  tp_retention:         TpRetentionCanvas,
+  tp_schemes:           TpSchemesCanvas,
 
   // Generic placeholder for any type not yet built — renders a clean "coming next" page
   // Used for: career_counsellor, learning_assistant, oral_assessment, ocr_exam, mock_interview,
@@ -106,11 +123,19 @@ const META = {
   // NSDC analyst dashboards
   national_overview:    { title: 'National Overview',   subtitle: 'NSDC Academy · headline KPIs + funnel',     icon: '🇮🇳' },
   training_partners:    { title: 'Training Partners',   subtitle: '587 TPs · audit, broadcast, drilldown',     icon: '🏢' },
-  candidates_analytics: { title: 'Candidates',          subtitle: '27.74 L candidates · demographics + drill', icon: '👥' },
+  candidates_analytics: { title: 'Enrollments',         subtitle: '27.74 L enrollments · scheme · state · sector · demographics', icon: '👥' },
   batches_analytics:    { title: 'Batches',             subtitle: '5.9 L batches · throughput + scheme split', icon: '📚' },
   sectors_analytics:    { title: 'Sectors',             subtitle: '37 sectors · E/T/A/C funnel per sector',    icon: '📊' },
   outcomes:             { title: 'Outcomes',            subtitle: 'Placement, women, assessment quality',      icon: '🎯' },
   war_room:             { title: 'War Room',            subtitle: 'Live anomalies · investigate + act',        icon: '🚨' },
+  apprenticeships:      { title: 'Apprenticeships (NAPS)', subtitle: '51L apprentices · talk to the NAPS dashboard', icon: '🛠️' },
+  // Training Partner dashboards
+  tp_rollup:            { title: 'Multi-Centre Rollup',  subtitle: 'All your centres in one view',                icon: '🏢' },
+  tp_enrollment:        { title: 'Enrolment',            subtitle: 'Across centres / tracks / schemes',           icon: '👥' },
+  tp_certification:     { title: 'Certification',        subtitle: 'Trained → assessed → certified pipeline',     icon: '🎓' },
+  tp_placement:         { title: 'Placements',           subtitle: 'Filing pipeline + verification states',       icon: '🤝' },
+  tp_retention:         { title: 'Retention',            subtitle: 'D30 / D60 / D90 cohort retention',            icon: '🔁' },
+  tp_schemes:           { title: 'Schemes',              subtitle: 'Schemes you run + compliance status',         icon: '🪙' },
 }
 
 export function getCanvasMeta(type) {

@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api/client.js'
 import { useApp } from '../../context/AppContext.jsx'
+import { applyCredit } from '../../utils/aiCredits.js'
 import {
   CheckCircle2, XCircle, IndianRupee, Calendar, Building2,
   ShieldCheck, AlertTriangle, Briefcase, MapPin, ChevronRight,
@@ -12,7 +13,7 @@ import {
 import VerificationBadge from './_VerificationBadge.jsx'
 
 export default function PlacementConfirmCanvas({ context }) {
-  const { showToast } = useApp() || {}
+  const { showToast, user } = useApp() || {}
   const [placement, setPlacement] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -43,12 +44,17 @@ export default function PlacementConfirmCanvas({ context }) {
         note: confirmed ? undefined : (note?.trim() || 'I did not join'),
       })
       setPlacement(r.placement); setDisputeMode(false); setNote('')
-      showToast?.({
-        kind: confirmed ? 'success' : 'warn',
-        text: confirmed
-          ? 'Confirmed. We\'ll wait for the employer to confirm independently.'
-          : 'Disputed. The TP and NSDC have been alerted to investigate.',
-      })
+      // Award AI credits on confirm — once per placement (idempotent via
+      // uniqueId so users can't refresh-spam).
+      if (confirmed) {
+        const next = applyCredit(user?.id, 'approve_placement', { uniqueId: placement.id })
+        showToast?.({
+          kind: 'success',
+          text: `Confirmed. +50 AI credits earned (balance ${next.balance}). Employer confirmation pending.`,
+        })
+      } else {
+        showToast?.({ kind: 'warn', text: 'Disputed. The TP and NSDC have been alerted to investigate.' })
+      }
     } catch {
       showToast?.({ kind: 'danger', text: 'Could not submit. Try again.' })
     } finally { setSubmitting(false) }

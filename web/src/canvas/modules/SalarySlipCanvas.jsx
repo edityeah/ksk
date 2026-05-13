@@ -9,6 +9,7 @@
 
 import { useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext.jsx'
+import { applyCredit } from '../../utils/aiCredits.js'
 import { Upload, FileText, ImageIcon, CheckCircle2, ChevronRight, X, ShieldCheck, Calendar, IndianRupee, Building2 } from 'lucide-react'
 
 // Local fixture so the recent-uploads strip has content for the demo.
@@ -32,7 +33,7 @@ function readableSize(bytes) {
 }
 
 export default function SalarySlipCanvas() {
-  const { meExtra, showToast } = useApp() || {}
+  const { meExtra, showToast, user } = useApp() || {}
   const t = meExtra?.trainee
   const fileInputRef = useRef(null)
   const [drag, setDrag] = useState(false)
@@ -87,7 +88,10 @@ export default function SalarySlipCanvas() {
       uploadedAt: 'just now',
     }, ...h])
     setPending(null); setSubmitting(false)
-    showToast?.({ kind: 'success', text: 'Payslip uploaded and verified. DigiLocker updated.' })
+    // Award credits on upload — once per (month, employer) pair.
+    const uniqueId = `${pending.parsed.month}--${pending.parsed.employer}`
+    const next = applyCredit(user?.id, 'upload_payslip', { uniqueId })
+    showToast?.({ kind: 'success', text: `Payslip verified · DigiLocker updated · +25 AI credits (balance ${next.balance})` })
   }
 
   return (

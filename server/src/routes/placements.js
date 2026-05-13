@@ -103,6 +103,29 @@ r.post('/:id/trainee-confirm', requireRole('trainee'), async (req, res, next) =>
       conflictReason: body.confirmed ? null : (body.note || 'trainee_denied'),
     }
     const updated = await prisma.placement.update({ where: { id }, data })
+
+    // Nudge the TP so they see the learner's response in their own grievances
+    // / placement-verification feed. Confidence-ladder consequence: TP avg
+    // moves up on confirm, down on dispute.
+    try {
+      const tp = p.tpId ? await prisma.trainingPartner.findUnique({ where: { id: p.tpId } }) : null
+      if (tp?.adminUserId) {
+        await prisma.notification.create({
+          data: {
+            type: 'system',
+            title: body.confirmed ? 'Trainee confirmed your placement' : 'Trainee DISPUTED your placement',
+            category: 'placement_verification',
+            priority: body.confirmed ? 'normal' : 'high',
+            message: body.confirmed
+              ? `${trainee?.fullName || 'A trainee'} confirmed they joined ${p?.role || 'the role'} — confidence up to 60%.`
+              : `${trainee?.fullName || 'A trainee'} said they did NOT join this placement. Reason: ${body.note || 'not specified'}.`,
+            targetUserId: tp.adminUserId,
+            action: JSON.stringify({ label: 'View placement', type: 'OPEN_PLACEMENT', payload: { placementId: id } }),
+          },
+        })
+      }
+    } catch (e) { /* notification best-effort */ }
+
     res.json({ placement: updated })
   } catch (e) { next(e) }
 })
@@ -130,6 +153,28 @@ r.post('/:id/employer-confirm', requireRole('employer'), async (req, res, next) 
         ctcMonthly: body.correctedCtc ?? p.ctcMonthly,
       },
     })
+
+    // Nudge the TP — third signal received (or denied). Confidence ladder
+    // advances or breaks at this point.
+    try {
+      const tp = p.tpId ? await prisma.trainingPartner.findUnique({ where: { id: p.tpId } }) : null
+      if (tp?.adminUserId) {
+        await prisma.notification.create({
+          data: {
+            type: 'system',
+            title: body.confirmed ? 'Employer confirmed the hire' : 'Employer DISPUTED the hire',
+            category: 'placement_verification',
+            priority: body.confirmed ? 'normal' : 'high',
+            message: body.confirmed
+              ? `${p.employer?.name || 'Employer'} confirmed this placement — confidence advances to 80%+.`
+              : `${p.employer?.name || 'Employer'} said this placement isn't real. Reason: ${body.note || 'not specified'}.`,
+            targetUserId: tp.adminUserId,
+            action: JSON.stringify({ label: 'View placement', type: 'OPEN_PLACEMENT', payload: { placementId: id } }),
+          },
+        })
+      }
+    } catch (e) { /* best-effort */ }
+
     res.json({ placement: updated })
   } catch (e) { next(e) }
 })

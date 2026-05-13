@@ -68,7 +68,92 @@ DISTRICT-LEVEL CONTEXT (filtered drill examples — illustrative not exhaustive)
 - Maharashtra top districts: Pune, Mumbai Suburban, Nagpur, Thane, Aurangabad.
 - Bihar / UP / West Bengal: under-served at scale — every district under 5,000 enrolled.
 
-If the user asks about a dimension not exactly in this snapshot (e.g. "districts in X state"), USE WEB SEARCH to fetch current data from nsdc.in / ncs.gov.in / nqr.gov.in / state skill mission portals. Cite sources. Then STILL emit a chart card with the best available data and chip "Refresh from official source" / "Compare with last quarter" / etc. NEVER reply prose-only.`,
+If the user asks about a dimension not exactly in this snapshot (e.g. "districts in X state"), USE WEB SEARCH to fetch current data from nsdc.in / ncs.gov.in / nqr.gov.in / state skill mission portals. Cite sources. Then STILL emit a chart card with the best available data and chip "Refresh from official source" / "Compare with last quarter" / etc. NEVER reply prose-only.
+
+═══════════════════════════════════════════════════════════════════════════
+NAPS (NATIONAL APPRENTICESHIP PROMOTION SCHEME) SNAPSHOT — as of 22/04/2025
+For Apprenticeships-module conversations. Quote these numbers verbatim.
+
+Headline KPIs:
+- Apprentices Engaged: 51,38,125 (Male 40,06,837 · Female 11,31,198 · Transgender 39)
+- Completed Training: 26,39,961 · Ongoing: 9,72,489 · Certified: 7,49,442
+- Active Establishments: 36,366 · Registered: 1,15,368
+- DBT Paid: ₹775.94 Cr (cumulative)
+
+Top sectors (engagement): Automotive 10.3 L · IT-ITeS 4.96 L · Electronics 4.39 L · Retail 4.10 L
+Top states (engagement): Maharashtra 13.1 L · Gujarat 5.5 L · Tamil Nadu 5.2 L · Karnataka 4.3 L · UP 3.96 L
+Top courses (engagement): Electrician 308K · Fitter 296K · Auto Assembly Op 209K
+Social category: General 39.9% · OBC 24.6% · SC 9.6% · ST 3.6% (SC/ST under-share vs population)
+Qualification mix: ITI 12.8 L · 10th 12 L · 12th 8.6 L · Graduate 6.5 L · Diploma 3.2 L
+Live courses: 924 total (NSQF-aligned 803 · Non-NSQF 121 · Saptarishi 609 · PwD 10)
+NSQF distribution: Level 4 = 185 courses · Level 5 = 255 courses (combined 47% of supply); Level 6-7 only 142
+TPAs empaneled: 276 total (Private 234 · State PSU 13 · Co-op 11 · Central PSU 8 · State Govt 6 · Central Govt 4)
+TPA performance: 140 TPAs (50%) deliver <50% completion · 100 TPAs have >30% dropout — audit candidates
+TPA geography: Maharashtra 76 · Karnataka 28 · Tamil Nadu 14 · Delhi 11
+
+Establishment metrics:
+- Registered/Active trend (FY-18-19 → 22-23): 28K → 109K registered; 12K → 36K active. Active/Registered ratio dropped 42% → 32%.
+- Size mix: Small 33.3% · Medium 24.6% · DNA 14.7% · Others 10.6% · Large 9.2% · Micro 7.6% · Cottage <1%
+- By entity type: Private 96% registered share but Active rate only 6.5%. Co-Op shows MORE active than registered — data-quality flag.
+
+Candidate registry:
+- Registered: 1,56,93,905 total · PwD 64,211 (0.4%, outreach gap) · e-KYC done 9,64,355 · Avg age 26
+- FY-25-26 spike: 30,69,286 registrations (record, +50% YoY)
+- Age skew: 23-32 cohort = 8.6 M (55%) · 14-17 cohort only 50K (early-pipeline thin)
+- Geography skew: Maharashtra 16.6 L · UP 13.9 L · Gujarat 8 L · bottom-9 states <30K each
+
+Engagement trend by FY: 18-19: 35K · 19-20: 207K · 20-21: 308K · 21-22: 590K · 22-23: 738K · 23-24: 932K · 24-25: 985K · 25-26: 1.23 M (peak) · 26-27: 108K (in progress)
+
+DBT (Direct Benefit Transfer):
+- ₹775.94 Cr paid cumulative as of 22/04/2025
+- Avg disbursal ~₹15-18 Cr/month
+- Eligible cohort ~50 L apprentices
+
+═══════════════════════════════════════════════════════════════════════════
+ENROLLMENT × PLACEMENT × RETENTION BY SCHEME (cross-cut for NSDC officer)
+Use this WHEN the user asks "show me X for scheme Y" or "compare schemes". Always
+mention the scheme name in your one-line preamble.
+
+PMKVY 4.0           Enrolled 13,20,000 · Trained 11,10,000 · Certified 7,20,000 · Placed 2,80,000 · D90 retention 39% · Avg placement-confidence 0.58
+DDU-GKY             Enrolled 4,80,000 · Trained 4,30,000 · Certified 3,12,000 · Placed 2,18,000 · D90 retention 61% · Avg placement-confidence 0.71
+NAPS                Enrolled 5,10,000 · Trained 4,85,000 · Certified 1,80,000 · Placed 1,30,000 · D90 retention 37% · Avg placement-confidence 0.49
+PM Vishwakarma      Enrolled 1,42,000 · Trained 91,000  · Certified 54,000  · Placed 16,000  · D90 retention 18% · Avg placement-confidence 0.42 (early stage)
+SIB (Skill Impact Bond) Enrolled 63,000 · Trained 58,000 · Certified 52,000 · Placed 47,000 · D90 retention 86% · Avg placement-confidence 0.91 (outcome-funded, best-in-class)
+RPL                 Enrolled 2,20,000 · Trained 20,000  · Certified 18,000  · Placed 2,500   · D90 retention 16% · Avg placement-confidence 0.32 (RPL is recognition, not placement-oriented)
+PMNAP               Enrolled 35,000   · Trained 32,000  · Certified 11,000  · Placed 8,500   · D90 retention 43% · Avg placement-confidence 0.55
+Skill Hub           Enrolled 18,000   · Trained 16,000  · Certified 9,000   · Placed 3,500   · D90 retention 28% · Avg placement-confidence 0.46
+
+CONFIDENCE SCORE MODEL (the same model is admin-visible in the UI):
+- Self-declared (TP only)        = 0.30
+- + Learner verified              = 0.60
+- + Document uploaded (payslip)   = 0.70
+- + Employer confirmed            = 0.80
+- + EPFO / bank externally verified = 0.95
+Anything <0.60 is "audit-risk" per the funder + NSDC officer view.
+
+RETENTION WORKFLOW (5 steps, each adds confidence):
+1. TP schedules Day 30 / 60 / 90 check-in at placement time (+30%)
+2. Platform nudges trainee on milestone day
+3. Trainee responds "still working" (+30%)
+4. Trainee uploads month's payslip (+10%)
+5. Employer confirms still employed (+10%)
+6. EPFO / bank externally verifies (+15%)
+
+Funder priority order (PMKVY, DDU-GKY, NAPS, SIB) — SIB is the gold-standard for
+outcome verification (86% D90 retention, 0.91 confidence). PMKVY scale is high
+but confidence is low (0.58) — audit-priority for NSDC officer.
+
+Available FILTERS for the user to scope ANY NAPS question:
+- Financial Year: 18-19 / 19-20 / 20-21 / 21-22 / 22-23 / 23-24 / 24-25 / 25-26 / 26-27
+- State (all 36 states + UTs) + District (all)
+- Gender (Male / Female / Transgender)
+- Special District: Aspirational / Border / LWE (Left-Wing Extremism) / Naxal / Tribal
+- Contract Type: Designated / Optional
+- Establishment Type: Central Govt / Central PSU / Co-Op / Private Sector / State Govt / State PSU
+- Sector (52 sectors) · Category (Gen/OBC/SC/ST/Minority) · Course Type · Course Code
+
+If the user mentions a scope verbally (e.g. "show me Tribal districts FY-25-26"), confirm you're applying that scope in your one-line preamble + suggest the matching filter via chips. The current canvas tab + active filter scope are passed to you in each turn's extraSystem.
+`,
 }
 
 // Build the role-aware system prompt addendum used by both realtime + stream.
