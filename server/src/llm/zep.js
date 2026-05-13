@@ -6,8 +6,11 @@
 import { ZepClient } from '@getzep/zep-cloud'
 
 let _client = null
+let _disabled = false   // turn Zep off after a hard quota / auth failure to stop the noise
+let _warnedOnce = false
 
 function client() {
+  if (_disabled) return null
   if (_client) return _client
   if (!process.env.ZEP_API_KEY) return null
   try {
@@ -17,6 +20,20 @@ function client() {
     console.warn('[zep] init failed:', e?.message || e)
     return null
   }
+}
+
+// Permanent shut-off for the rest of the process when Zep returns a 403 /
+// over-quota / auth-fail. Keeps logs clean and avoids per-request latency.
+function disableIfTerminal(err) {
+  const msg = String(err?.message || err)
+  if (/over the .*usage limit|403|401|forbidden|unauthorized/i.test(msg)) {
+    if (!_disabled) {
+      _disabled = true
+      console.warn('[zep] DISABLED for this process — quota / auth failure:', msg.slice(0, 120))
+    }
+    return true
+  }
+  return false
 }
 
 // Ensure the user exists in Zep + a thread for this persona is present.
@@ -42,16 +59,21 @@ export async function ensureThread(userId, persona = 'general', userMeta = {}) {
   return threadId
 }
 
-export async function addMessage(threadId, role, content) {
+// Fire-and-forget. We don't await this in hot request paths — the caller
+// returns the LLM stream before Zep is done, avoiding 500-1000ms latency per
+// turn when Zep is slow or rate-limited.
+export function addMessage(threadId, role, content) {
   const c = client()
-  if (!c || !threadId || !content) return
-  try {
-    await c.thread.addMessages(threadId, {
-      messages: [{ role, content: String(content).slice(0, 8000) }],
-    })
-  } catch (e) {
-    console.warn('[zep] addMessage failed:', e?.message || e)
-  }
+  if (!c || !threadId || !content) return Promise.resolve()
+  return c.thread.addMessages(threadId, {
+    messages: [{ role, content: String(content).slice(0, 8000) }],
+  }).catch(e => {
+    if (disableIfTerminal(e)) return
+    if (!_warnedOnce) {
+      _warnedOnce = true
+      console.warn('[zep] addMessage failed (suppressing further warnings):', e?.message || e)
+    }
+  })
 }
 
 // Fetch the rolling memory context Zep maintains (summary + relevant facts).
@@ -63,7 +85,7 @@ export async function getContext(threadId) {
     const ctx = await c.thread.getUserContext(threadId)
     return ctx?.context || ''
   } catch (e) {
-    console.warn('[zep] getContext failed:', e?.message || e)
+    disableIfTerminal(e)
     return ''
   }
 }

@@ -18,6 +18,7 @@ import { getPersona } from '../llm/anam.js'
 import { ensureThread, addMessage, getContext } from '../llm/zep.js'
 import { CardParser } from '../llm/cardParser.js'
 import { CARD_TOOLBOX } from '../llm/cardPrompts.js'
+import { buildRoleContext } from '../llm/roleContext.js'
 
 const r = Router()
 r.use(requireAuth)
@@ -102,27 +103,38 @@ r.post('/stream', async (req, res, next) => {
       messages: z.array(z.object({ role: z.enum(['user', 'assistant', 'system']), content: z.string() })).min(1),
       extraSystem: z.string().optional(),
       useWebSearch: z.boolean().optional(),
+      role: z.string().optional(),     // drives role-aware persona context
     }).parse(req.body)
 
     const persona = getPersona(body.persona)
     const useWebSearch = body.useWebSearch ?? !!persona.useWebSearch
 
-    // Zep memory — best-effort
-    const threadId = await ensureThread(req.user.id, body.persona, { firstName: req.user.name?.split(' ')[0] })
-    const memCtx = await getContext(threadId)
+    // Zep memory — best-effort. We DO await ensureThread + getContext so we
+    // can inject the rolling memory into the system prompt, BUT both fail
+    // silently and disable Zep for the rest of the process on quota errors
+    // so they never block the response path.
+    const threadId = await ensureThread(req.user.id, body.persona, { firstName: req.user.name?.split(' ')[0] }).catch(() => null)
+    const memCtx = threadId ? (await getContext(threadId).catch(() => '')) : ''
 
     let system = persona.systemPrompt
+    // Role context: when Saathi (general persona) is talking to a non-trainee
+    // role, append role-specific framing + a heavy data pack (e.g. NSDC Academy
+    // numbers for nsdc_officer) so the agent answers like an analyst with real
+    // figures and emits chart cards.
+    const roleAddendum = buildRoleContext({ persona: body.persona, role: body.role })
+    if (roleAddendum) system += '\n\n' + roleAddendum
     // Card toolbox — tells the LLM *when* and *how* to emit
-    // <<<KSKCARD>>>...<<<END>>> fences for the 12 KSK card types. The fences
-    // are parsed out server-side by CardParser and forwarded as a separate
-    // SSE "card" event so the client can render real React components.
+    // <<<KSKCARD>>>...<<<END>>> fences. Now includes the 6 analyst chart cards
+    // (kpi_grid, bar_chart, donut_chart, line_chart, data_table, action_panel)
+    // alongside the 15 learner cards.
     system += '\n\n' + CARD_TOOLBOX
     if (body.extraSystem) system += '\n\nAdditional context:\n' + body.extraSystem
     if (memCtx)           system += '\n\nWhat you remember about this user:\n' + memCtx
 
-    // Save the latest user message
+    // Save the latest user message — fire-and-forget so Zep latency / errors
+    // never block the response path.
     const lastUser = [...body.messages].reverse().find(m => m.role === 'user')
-    if (lastUser) await addMessage(threadId, 'user', lastUser.content)
+    if (lastUser && threadId) addMessage(threadId, 'user', lastUser.content)
 
     // SSE headers
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
@@ -145,6 +157,9 @@ r.post('/stream', async (req, res, next) => {
         res.write(`data: ${JSON.stringify({ card })}\n\n`)
       },
     })
+    const lastUserText = lastUser?.content?.slice(0, 120) || ''
+    console.log(`[ai/stream] user=${req.user?.id} role=${body.role || '-'} persona=${body.persona} webSearch=${useWebSearch} systemLen=${system.length} msg="${lastUserText}"`)
+    const t0 = Date.now()
     try {
       await streamChat({
         system,
@@ -159,13 +174,14 @@ r.post('/stream', async (req, res, next) => {
         },
       })
       cardParser.flush()
+      console.log(`[ai/stream] ok in ${Date.now() - t0}ms · ${fullText.length} chars · ${citations.length} citations`)
     } catch (e) {
-      console.error('[ai/stream]', e)
-      res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`)
+      console.error(`[ai/stream] FAILED after ${Date.now() - t0}ms:`, e?.message || e)
+      res.write(`data: ${JSON.stringify({ error: e.message || String(e) })}\n\n`)
     }
 
-    // Persist assistant response
-    if (fullText) await addMessage(threadId, 'assistant', fullText)
+    // Persist assistant response — fire-and-forget (see above)
+    if (fullText && threadId) addMessage(threadId, 'assistant', fullText)
 
     res.write(`data: ${JSON.stringify({ done: true, citations })}\n\n`)
     res.end()

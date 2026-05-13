@@ -19,6 +19,12 @@ import InfoCard            from './InfoCard.jsx'
 import TicketCard          from './TicketCard.jsx'
 import CareerPathsCard     from './CareerPathsCard.jsx'
 import SkillGapCard        from './SkillGapCard.jsx'
+import KpiGridCard         from './KpiGridCard.jsx'
+import BarChartCard        from './BarChartCard.jsx'
+import DonutChartCard      from './DonutChartCard.jsx'
+import LineChartCard       from './LineChartCard.jsx'
+import DataTableCard       from './DataTableCard.jsx'
+import ActionPanelCard     from './ActionPanelCard.jsx'
 import Chips               from './Chips.jsx'
 
 const REGISTRY = {
@@ -37,6 +43,12 @@ const REGISTRY = {
   ticket:           TicketCard,
   career_paths:     CareerPathsCard,
   skill_gap:        SkillGapCard,
+  kpi_grid:         KpiGridCard,
+  bar_chart:        BarChartCard,
+  donut_chart:      DonutChartCard,
+  line_chart:       LineChartCard,
+  data_table:       DataTableCard,
+  action_panel:     ActionPanelCard,
 }
 
 export default function CardRenderer({ card, onChip }) {

@@ -23,6 +23,12 @@ import LearningAssistantCanvas from './LearningAssistantCanvas.jsx'
 import SwiftyAssistantCanvas from './SwiftyAssistantCanvas.jsx'
 import GrievanceCanvas from './GrievanceCanvas.jsx'
 import SalarySlipCanvas from './SalarySlipCanvas.jsx'
+import TrainingPartnersDashboardCanvas from './TrainingPartnersDashboardCanvas.jsx'
+import CandidatesAnalyticsCanvas from './CandidatesAnalyticsCanvas.jsx'
+import BatchesAnalyticsCanvas from './BatchesAnalyticsCanvas.jsx'
+import SectorsAnalyticsCanvas from './SectorsAnalyticsCanvas.jsx'
+import OutcomesCanvas from './OutcomesCanvas.jsx'
+import WarRoomCanvas from './WarRoomCanvas.jsx'
 import GenericCanvas from './GenericCanvas.jsx'
 
 export const CANVAS_MODULES = {
@@ -51,6 +57,13 @@ export const CANVAS_MODULES = {
   swifty_assistant:     SwiftyAssistantCanvas,
   grievance:            GrievanceCanvas,
   salary_slip:          SalarySlipCanvas,
+  // NSDC analyst dashboards — each maps to a NSDC Academy Power BI tab.
+  training_partners:    TrainingPartnersDashboardCanvas,
+  candidates_analytics: CandidatesAnalyticsCanvas,
+  batches_analytics:    BatchesAnalyticsCanvas,
+  sectors_analytics:    SectorsAnalyticsCanvas,
+  outcomes:             OutcomesCanvas,
+  war_room:             WarRoomCanvas,
   notifications:        NotificationsCanvas,
 
   // Generic placeholder for any type not yet built — renders a clean "coming next" page
@@ -90,6 +103,14 @@ const META = {
   swifty_assistant:     { title: 'Saathi',              subtitle: 'Your skilling companion · enroll → train → certify → place', icon: '✨' },
   grievance:            { title: 'Grievance',           subtitle: 'File and track grievances with NSDC', icon: '🆘' },
   salary_slip:          { title: 'Upload Payslip',      subtitle: 'OCR-verified salary slips → DigiLocker', icon: '🧾' },
+  // NSDC analyst dashboards
+  national_overview:    { title: 'National Overview',   subtitle: 'NSDC Academy · headline KPIs + funnel',     icon: '🇮🇳' },
+  training_partners:    { title: 'Training Partners',   subtitle: '587 TPs · audit, broadcast, drilldown',     icon: '🏢' },
+  candidates_analytics: { title: 'Candidates',          subtitle: '27.74 L candidates · demographics + drill', icon: '👥' },
+  batches_analytics:    { title: 'Batches',             subtitle: '5.9 L batches · throughput + scheme split', icon: '📚' },
+  sectors_analytics:    { title: 'Sectors',             subtitle: '37 sectors · E/T/A/C funnel per sector',    icon: '📊' },
+  outcomes:             { title: 'Outcomes',            subtitle: 'Placement, women, assessment quality',      icon: '🎯' },
+  war_room:             { title: 'War Room',            subtitle: 'Live anomalies · investigate + act',        icon: '🚨' },
 }
 
 export function getCanvasMeta(type) {

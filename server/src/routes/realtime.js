@@ -15,6 +15,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import rateLimit from 'express-rate-limit'
 import { requireAuth } from '../auth/middleware.js'
+import { buildRoleContext } from '../llm/roleContext.js'
 
 const r = Router()
 r.use(requireAuth)
@@ -55,37 +56,8 @@ const PERSONA_PROMPTS = {
     "Adapt your tone, vocabulary and depth to the user's role (described below). Keep voice replies brief and natural.",
 }
 
-// Role-specific framing for Saathi. Picked based on the `role` field the
-// caller sends. Without this, every role was greeted as a trainee.
-const ROLE_OPENERS = {
-  'trainee':
-    "The user is a TRAINEE / LEARNER currently enrolled in (or applying to) an Indian skilling course. " +
-    "Help them with enrollment, course discovery, attendance, learning content, certificates, stipend, mock interviews, jobs and placement. " +
-    "Talk in warm, encouraging Hinglish/English. Keep it practical.",
-  'trainer':
-    "The user is a TRAINER on KSK. Help them prepare lesson plans, run attendance, manage trainees, anticipate assessment-day issues, and track learner progress. " +
-    "Be operationally precise — they want short, scannable answers, not pep talks.",
-  'training_centre':
-    "The user is staff at a TRAINING CENTRE on KSK. Help them with batch management, infrastructure compliance, accreditation queue, assessment scheduling and centre-level dashboards. " +
-    "Be operationally precise.",
-  'training_partner':
-    "The user is a TRAINING PARTNER overseeing multiple training centres. Help them with TP-level rollups, placement declaration (maker step), retention check-ins, accreditation status, and audit-grade compliance. " +
-    "Speak as a peer — they manage operations at scale.",
-  'assessor':
-    "The user is an ASSESSOR on KSK. Help with assessment scheduling, NOS coverage, Live Assessment day operations and grading workflows. Be terse and precise.",
-  'ssc':
-    "The user is from a SECTOR SKILL COUNCIL (SSC). Help analyze sector-level outcomes, qualification packs, trainer-of-trainer pipelines and approval queues. Use precise numbers from dashboards.",
-  'employer':
-    "The user is an EMPLOYER on KSK. Help them confirm hires (maker-checker placement verification), raise grievances, post jobs and view 30/60/90-day retention of placed candidates. Be commercial.",
-  'nsdc_officer':
-    "The user is an NSDC OFFICER. Help them analyze national skilling outcomes, drill into state/district performance, investigate anomalies (drop-outs, ghost placements, stipend failures), and prepare CEO/ministry briefs. " +
-    "Be analytical, precise, and citation-friendly. Use exact numbers from dashboards. Speak peer-to-peer — never address them as a student or trainee.",
-  'funder':
-    "The user is a FUNDER (e.g. Skill Outcomes Fund). Help them review verified outcomes by scheme, money-vs-outcomes alignment, retention cohorts and audit-grade dashboards. " +
-    "Be analytical and conservative — never claim outcomes that aren't 3-signal verified.",
-  'stipend_officer':
-    "The user is a STIPEND OFFICER. Help process disbursements, investigate Aadhaar-bank failures, retry queues, and answer trainee stipend questions. Be operationally precise.",
-}
+// Role-specific framing + data packs live in server/src/llm/roleContext.js so
+// both /api/realtime/session and /api/ai/stream consume the same context.
 
 // Knowledge-base directive shared by every persona — defines the canonical
 // sources to consult for qualification / course / job-role questions.
@@ -121,12 +93,12 @@ r.post('/session', async (req, res, next) => {
     }
     const body = BodySchema.parse(req.body || {})
     const base = PERSONA_PROMPTS[body.persona] || PERSONA_PROMPTS.general
-    // For Saathi (general), append the role-specific opener so the agent
-    // addresses an NSDC officer like an analyst and a trainee like a learner.
-    const isGeneral = !body.persona || body.persona === 'general'
-    const roleOpener = isGeneral && body.role ? ROLE_OPENERS[body.role] : null
+    // For Saathi (general), append the role-specific opener + data pack so the
+    // agent addresses an NSDC officer like an analyst, a trainee like a learner,
+    // and has the right dashboard numbers ready to quote.
+    const roleAddendum = buildRoleContext({ persona: body.persona, role: body.role })
     const parts = [base]
-    if (roleOpener) parts.push(roleOpener)
+    if (roleAddendum) parts.push(roleAddendum)
     parts.push(KB_DIRECTIVE)
     parts.push(LANGUAGE_RULE)
     if (body.extraSystem) parts.push(body.extraSystem)

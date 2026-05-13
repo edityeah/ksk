@@ -54,7 +54,7 @@ import { CanvasHeaderActionsContext } from '../canvas/CanvasHeaderActions.js'
 import ChatBubble from './ChatBubble.jsx'
 import CardRenderer from './cards/CardRenderer.jsx'
 
-export default function AvatarCall({ persona, title, intro, useWebSearch, extraSystem, suggestions = [], pendingPrompt, threadId: initialThreadId, onCallStateChange }) {
+export default function AvatarCall({ persona, title, intro, useWebSearch, extraSystem, suggestions = [], quickAsks = [], pendingPrompt, threadId: initialThreadId, onCallStateChange }) {
   const { showToast, meExtra, role, refreshThreads } = useApp()
   const { setActions } = useContext(CanvasHeaderActionsContext) || {}
   const threadIdRef = useRef(initialThreadId || null)        // persisted thread id (server)
@@ -245,6 +245,7 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
       // keep it enabled (Career Counsellor needs fresh scheme/job lookups).
       useWebSearch: callMode === 'voice' ? false : !!useWebSearch,
       extraSystem: effectiveSystem || undefined,
+      role: role || undefined,                  // role-aware persona context
     }
     let talkStream = null
     if (anamClient && typeof anamClient.createTalkMessageStream === 'function') {
@@ -324,8 +325,17 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
       if (e?.name === 'AbortError') {
         console.log('[stream] aborted (barge-in)')
       } else {
+        // Surface the actual error to both console and the chat bubble so we
+        // can diagnose, instead of the generic "lost connection" message.
         console.error('[stream]', e)
-        setMessages(m => [...m, { role: 'bot', text: 'Sorry, I lost the connection. Please try again.' }])
+        const detail = e?.message || String(e) || 'unknown error'
+        const friendly =
+          /\b401\b|unauthorized/i.test(detail) ? "Your session expired — please sign in again." :
+          /\b429\b|rate/i.test(detail)         ? "You're sending requests too fast. Wait a moment and retry." :
+          /\b5\d\d\b/.test(detail)             ? `Server error: ${detail}. Check server logs.` :
+          /failed to fetch|network/i.test(detail) ? "Network error — can't reach the KSK server." :
+                                                  `Request failed: ${detail}`
+        setMessages(m => [...m, { role: 'bot', text: friendly }])
       }
     } finally {
       setThinking(false)
@@ -496,7 +506,29 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
           Hidden during a voice call (Zone 1 already fills the canvas like a
           phone call). Visible in video mode (under the video) and in text mode. */}
       <div className={`${callMode === 'voice' && callState !== 'idle' ? 'hidden' : 'flex'} flex-1 min-h-0 overflow-y-auto px-4 md:px-5 py-4 flex-col gap-2.5`}>
-        {messages.length === 0 && suggestions.length > 0 && (
+        {/* "Try asking" — vertical grid of prompts at the top of the chat
+            thread. ALWAYS visible (scrolls with the thread, so it sits above
+            the messages and the user can scroll back to it at any time).
+            `quickAsks` is the analyst-canvas prop (long list, one per row).
+            `suggestions` is the legacy learner-canvas prop (shown only when
+            the conversation is empty, smaller chips). */}
+        {quickAsks.length > 0 && (
+          <div className="mb-3 rounded-2xl border border-bdr-light bg-gradient-to-b from-primary-light/30 to-white p-3">
+            <div className="text-[11px] uppercase tracking-wider font-bold text-primary mb-2 inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Try asking
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {quickAsks.map((q, i) => (
+                <button key={i} onClick={() => streamReply(q, anamRef.current)}
+                  className="text-left text-[12px] px-3 py-2 rounded-xl border border-bdr-light bg-white hover:border-primary hover:bg-primary-light/40 transition leading-snug">
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.length === 0 && suggestions.length > 0 && quickAsks.length === 0 && (
           <div className="mb-3">
             <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary mb-2">Try asking</div>
             <div className="flex flex-wrap gap-2">
@@ -509,7 +541,7 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
             </div>
           </div>
         )}
-        {messages.length === 0 && suggestions.length === 0 && (
+        {messages.length === 0 && suggestions.length === 0 && quickAsks.length === 0 && (
           <div className="text-center py-6 text-txt-secondary text-[13px]">Type below, or tap the phone / video icon above to call.</div>
         )}
         {messages.map((m, i) => (
