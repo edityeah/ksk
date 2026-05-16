@@ -37,6 +37,9 @@ import TpCertificationCanvas from './TpCertificationCanvas.jsx'
 import TpPlacementCanvas from './TpPlacementCanvas.jsx'
 import TpRetentionCanvas from './TpRetentionCanvas.jsx'
 import TpSchemesCanvas from './TpSchemesCanvas.jsx'
+// Secure-Demand canvases (TP + TC views)
+import TpDemandMasterCanvas from './TpDemandMasterCanvas.jsx'
+import TcDemandBoardCanvas from './TcDemandBoardCanvas.jsx'
 import GenericCanvas from './GenericCanvas.jsx'
 
 export const CANVAS_MODULES = {
@@ -82,6 +85,10 @@ export const CANVAS_MODULES = {
   tp_placement:         TpPlacementCanvas,
   tp_retention:         TpRetentionCanvas,
   tp_schemes:           TpSchemesCanvas,
+
+  // Secure Demand
+  tp_demand_master:     TpDemandMasterCanvas,
+  tc_demand_board:      TcDemandBoardCanvas,
 
   // Generic placeholder for any type not yet built — renders a clean "coming next" page
   // Used for: career_counsellor, learning_assistant, oral_assessment, ocr_exam, mock_interview,
@@ -136,6 +143,9 @@ const META = {
   tp_placement:         { title: 'Placements',           subtitle: 'Filing pipeline + verification states',       icon: '🤝' },
   tp_retention:         { title: 'Retention',            subtitle: 'D30 / D60 / D90 cohort retention',            icon: '🔁' },
   tp_schemes:           { title: 'Schemes',              subtitle: 'Schemes you run + compliance status',         icon: '🪙' },
+  // Secure-Demand tile metadata
+  tp_demand_master:     { title: 'Demand Master',        subtitle: 'National MoUs · slot allocation · skill demand sheet', icon: '🤝' },
+  tc_demand_board:      { title: 'Demand Board',         subtitle: 'Confirm slots with local branches',          icon: '🤝' },
 }
 
 export function getCanvasMeta(type) {

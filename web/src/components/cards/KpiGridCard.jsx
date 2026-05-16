@@ -1,9 +1,11 @@
 // KpiGridCard — hero KPI strip rendered as a responsive tile grid. Used for
 // "show me the national overview" / "what are the headline numbers" queries.
-// Each item: { label, value, delta?, tone? }
+// Each item: { label, value, delta?, tone?, hint?, onClick? }
 //
 // tone drives a pastel background + a darker accent stripe so the eye can
 // scan 4-12 numbers without colour collisions.
+// Pass `onClick` per item (or a master `onItemClick(item, idx)` on the card)
+// to make a tile drillable; the tile gets a hover ring + cursor.
 
 const TONES = {
   primary: 'bg-primary-light/60 text-primary-dark border-primary/20',
@@ -17,7 +19,7 @@ const TONES = {
   fuchsia: 'bg-fuchsia-50  text-fuchsia-700  border-fuchsia-200/60',
 }
 
-export default function KpiGridCard({ card }) {
+export default function KpiGridCard({ card, onItemClick }) {
   const items = Array.isArray(card.items) ? card.items : []
   return (
     <div className="rounded-2xl border border-bdr-light bg-white shadow-card overflow-hidden">
@@ -31,16 +33,29 @@ export default function KpiGridCard({ card }) {
           const tone = TONES[it.tone] || TONES.primary
           const deltaUp = typeof it.delta === 'string' && /^\+|↑|up/i.test(it.delta)
           const deltaDn = typeof it.delta === 'string' && /^-|↓|down|dip|drop/i.test(it.delta)
+          const handler = it.onClick || (onItemClick ? () => onItemClick(it, i) : null)
+          const interactive = !!handler
+          const Wrapper = interactive ? 'button' : 'div'
           return (
-            <div key={i} className={`rounded-xl border ${tone} p-3 transition hover:shadow-card`}>
-              <div className="text-[10px] uppercase tracking-wider font-bold opacity-70 truncate">{it.label}</div>
+            <Wrapper
+              key={i}
+              onClick={handler || undefined}
+              type={interactive ? 'button' : undefined}
+              className={`text-left rounded-xl border ${tone} p-3 transition hover:shadow-card ${interactive ? 'cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-current/30 focus:outline-none focus:ring-2 focus:ring-current/40' : ''}`}>
+              <div className="text-[10px] uppercase tracking-wider font-bold opacity-70 truncate inline-flex items-center gap-1 w-full">
+                <span className="truncate">{it.label}</span>
+                {interactive && <span className="ml-auto opacity-60 text-[9px]">›</span>}
+              </div>
               <div className="text-[20px] md:text-[22px] font-bold leading-tight mt-0.5">{it.value}</div>
               {it.delta && (
                 <div className={`text-[10px] font-bold mt-1 inline-flex items-center gap-1 ${deltaDn ? 'text-rose-600' : deltaUp ? 'text-emerald-700' : 'text-txt-secondary'}`}>
                   {it.delta}
                 </div>
               )}
-            </div>
+              {it.hint && (
+                <div className="text-[10px] italic opacity-70 leading-snug mt-1">{it.hint}</div>
+              )}
+            </Wrapper>
           )
         })}
       </div>

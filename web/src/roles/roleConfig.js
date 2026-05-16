@@ -82,6 +82,8 @@ export const ROLE_BOTS = {
     { id: 'updates',    name: 'Updates & Alerts',   desc: 'Scheme changes, broadcasts, reminders',               icon: '🔔', tone: 'pink',    canvas: 'notifications' },
   ],
   training_centre: [
+    // ── Methodology (TC owns the daily signal generation)
+    { id: 'demand_board', name: 'Demand Board',         desc: 'Confirm employer slots with local branches before batch starts',  icon: '🤝', tone: 'emerald', canvas: 'tc_demand_board' },
     { id: 'dashboard',   name: 'Centre Dashboard',     desc: 'Live KPIs: enrolment, attendance, certs, placement', icon: '📊', tone: 'indigo',  canvas: 'centre_dashboard' },
     { id: 'batches',     name: 'Batches',              desc: 'All running and planned batches at this centre',     icon: '📚', tone: 'emerald', canvas: 'batches' },
     { id: 'trainers',    name: 'Trainers',             desc: 'Trainer roster, certifications and workload',        icon: '👨‍🏫', tone: 'sky',     canvas: 'centre_dashboard' },
@@ -93,6 +95,8 @@ export const ROLE_BOTS = {
     { id: 'updates',     name: 'Updates & Alerts',     desc: 'Scheme announcements, accreditation notices',        icon: '🔔', tone: 'pink',    canvas: 'notifications' },
   ],
   training_partner: [
+    // ── Methodology (chronological flow: demand → selection → training → mentor → place → retain)
+    { id: 'demand_master',name: 'Demand Master',       desc: 'National employer MoUs and slot allocation across centres',       icon: '🤝', tone: 'sky',     canvas: 'tp_demand_master' },
     // ── Core analytic stack (mirrors NSDC Officer reorder: rollup → enrol → cert → place → retain → schemes)
     { id: 'rollup',       name: 'Multi-Centre Rollup', desc: 'Outcomes across all your centres in one view',         icon: '🏢', tone: 'indigo',  canvas: 'tp_rollup' },
     { id: 'enrollment',   name: 'Enrolment',           desc: 'Across centres, tracks and schemes',                   icon: '👥', tone: 'violet',  canvas: 'tp_enrollment' },
@@ -230,8 +234,8 @@ export const ROLE_SUGGESTIONS = {
 export const ROLE_CANVASES = {
   trainee: ['skill_passport', 'course_discovery', 'career_counsellor', 'learning_assistant', 'oral_assessment', 'ocr_exam', 'mock_interview', 'jobs_marketplace', 'placement_confirm', 'retention_checkin', 'salary_slip', 'stipend_status', 'grievance', 'notifications'],
   trainer: ['attendance', 'lesson_delivery', 'quiz', 'at_risk', 'notifications'],
-  training_centre: ['centre_dashboard', 'batches', 'cert_pipeline', 'placement_declare', 'inspection', 'at_risk', 'notifications'],
-  training_partner: ['tp_rollup', 'tp_enrollment', 'tp_certification', 'tp_placement', 'tp_retention', 'tp_schemes', 'placement_declare', 'batches', 'at_risk', 'notifications'],
+  training_centre: ['tc_demand_board', 'centre_dashboard', 'batches', 'cert_pipeline', 'placement_declare', 'inspection', 'at_risk', 'notifications'],
+  training_partner: ['tp_demand_master', 'tp_rollup', 'tp_enrollment', 'tp_certification', 'tp_placement', 'tp_retention', 'tp_schemes', 'placement_declare', 'batches', 'at_risk', 'notifications'],
   assessor: ['assessment_queue', 'live_assessment', 'notifications'],
   ssc: ['accreditation', 'standards', 'sector_outcomes', 'broadcast', 'notifications'],
   employer: ['employer_confirm', 'retention_confirm', 'my_hires', 'post_job', 'notifications'],
