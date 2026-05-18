@@ -56,7 +56,7 @@ export const ROLE_BOTS = {
 
     // ── Section 2: Employment Confirmation (the funder-demo critical path)
     { id: 'placement',       name: 'Confirm Placement', desc: 'Confirm a placement declared by your training partner', icon: '🤝', tone: 'violet',  canvas: 'placement_confirm', section: 'employment' },
-    { id: 'retention',       name: 'Retention Check-in',desc: 'Day 30/60/90 retention confirmation',                   icon: '📅', tone: 'cyan',    canvas: 'retention_checkin', section: 'employment' },
+    { id: 'retention',       name: 'Retention Check-in',desc: 'Monthly check-ins for 12 months · EPFO auto-verify',    icon: '📅', tone: 'cyan',    canvas: 'retention_checkin', section: 'employment' },
     { id: 'payslip',         name: 'Upload Payslip',    desc: 'OCR-verified salary slips → DigiLocker',                icon: '🧾', tone: 'lime',    canvas: 'salary_slip',       section: 'employment' },
     { id: 'grievance',       name: 'Grievance',         desc: 'File and track grievances with NSDC',                   icon: '🆘', tone: 'rose',    canvas: 'grievance',         section: 'employment' },
 
@@ -89,6 +89,7 @@ export const ROLE_BOTS = {
     { id: 'trainers',    name: 'Trainers',             desc: 'Trainer roster, certifications and workload',        icon: '👨‍🏫', tone: 'sky',     canvas: 'centre_dashboard' },
     { id: 'cert_pipe',   name: 'Certification Pipeline',desc: 'Enrolled → Trained → Assessed → Certified funnel',  icon: '🎓', tone: 'amber',   canvas: 'cert_pipeline' },
     { id: 'placement',   name: 'Declare Placement',    desc: 'Declare placements for verified trainees',           icon: '🤝', tone: 'violet',  canvas: 'placement_declare' },
+    { id: 'retention_m1m3', name: 'Months 1-3 Retention', desc: 'Upload monthly salary slips for placed trainees', icon: '📅', tone: 'cyan',    canvas: 'retention_checkin' },
     { id: 'at_risk',     name: 'At-Risk Trainees',     desc: 'Drop-out risk by batch and attendance',              icon: '⚠️', tone: 'rose',    canvas: 'at_risk' },
     { id: 'inspection',  name: 'Inspection Readiness', desc: 'NSDC / SSC inspection self-check',                   icon: '🔍', tone: 'teal',    canvas: 'inspection' },
     { id: 'stipend_view',name: 'Stipend Status',       desc: 'Disbursement status across your trainees',           icon: '💸', tone: 'cyan',    canvas: 'stipend_queue' },
@@ -234,7 +235,7 @@ export const ROLE_SUGGESTIONS = {
 export const ROLE_CANVASES = {
   trainee: ['skill_passport', 'course_discovery', 'career_counsellor', 'learning_assistant', 'oral_assessment', 'ocr_exam', 'mock_interview', 'jobs_marketplace', 'placement_confirm', 'retention_checkin', 'salary_slip', 'stipend_status', 'grievance', 'notifications'],
   trainer: ['attendance', 'lesson_delivery', 'quiz', 'at_risk', 'notifications'],
-  training_centre: ['tc_demand_board', 'centre_dashboard', 'batches', 'cert_pipeline', 'placement_declare', 'inspection', 'at_risk', 'notifications'],
+  training_centre: ['tc_demand_board', 'centre_dashboard', 'batches', 'cert_pipeline', 'placement_declare', 'retention_checkin', 'inspection', 'at_risk', 'notifications'],
   training_partner: ['tp_demand_master', 'tp_rollup', 'tp_enrollment', 'tp_certification', 'tp_placement', 'tp_retention', 'tp_schemes', 'placement_declare', 'batches', 'at_risk', 'notifications'],
   assessor: ['assessment_queue', 'live_assessment', 'notifications'],
   ssc: ['accreditation', 'standards', 'sector_outcomes', 'broadcast', 'notifications'],

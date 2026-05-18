@@ -5,10 +5,19 @@
 //   partially_verified  : one of { trainee, employer } has confirmed
 //   verified            : both trainee AND employer have confirmed AND values consistent
 //   conflicted          : trainee or employer says "no this is wrong"
-//   disputed            : explicit dispute
+//   disputed            : trainee says "joined but conditions don't match" (grievance route)
 //
-// All endpoints are guarded; only the declarant (TP) can create; only the trainee can trainee-confirm;
-// only the employer admin can employer-confirm.
+// Verification artefacts beyond yes/no:
+//   - appointmentLetterUrl       : TC-uploaded copy (declaration time)
+//   - offerLetterTraineeUrl      : trainee-uploaded independent copy (confirm time)
+//   - offerLetterOcr             : OCR-extracted fields (run on either upload)
+//   - offerLetterTraineeAckAt    : trainee confirmed each OCR field
+//   - conflictCategories         : structured "No" — JSON list of process-failure tags
+//   - grievances                 : separate model for "Yes but..." disputes
+//
+// All endpoints are guarded; only the declarant (TP/TC) can create; only the
+// trainee can trainee-confirm + raise grievances; only the employer admin can
+// employer-confirm.
 
 import { Router } from 'express'
 import { z } from 'zod'
@@ -17,6 +26,30 @@ import { requireAuth, requireRole } from '../auth/middleware.js'
 
 const r = Router()
 r.use(requireAuth)
+
+// Retention generator — 12 monthly check-ins from the joining date.
+// Months 1-3 are TC-owned (TC must upload a salary slip + trainee confirms).
+// Months 4-12 are trainee-owned (system nudges trainee; EPFO can auto-verify).
+async function seedRetentionMilestones(placement) {
+  const join = new Date(placement.joiningDate)
+  const data = []
+  for (let m = 1; m <= 12; m++) {
+    const due = new Date(join.getTime())
+    due.setMonth(due.getMonth() + m)
+    data.push({
+      placementId: placement.id,
+      traineeId: placement.traineeId,
+      milestone: m,
+      dueAt: due,
+      ownerRole: m <= 3 ? 'training_centre' : 'trainee',
+      state: 'pending',
+    })
+  }
+  // createMany skips defaults silently on SQLite; loop is cheap and tolerant.
+  for (const row of data) {
+    try { await prisma.retentionCheckin.create({ data: row }) } catch {}
+  }
+}
 
 // ── Declare a placement (TP/TC) ──────────────────────────────────────────────
 r.post('/declare', requireRole('training_partner', 'training_centre'), async (req, res, next) => {
@@ -28,14 +61,15 @@ r.post('/declare', requireRole('training_partner', 'training_centre'), async (re
       ctcMonthly: z.number().int(),
       joiningDate: z.string(),
       employmentType: z.enum(['wage', 'self', 'apprenticeship']).default('wage'),
-      appointmentLetterUrl: z.string().nullish(),
+      appointmentLetterUrl: z.string().nullish(),                  // base64 data URL or remote URL — REQUIRED for full verification but accepted as null for legacy
+      offerLetterOcr: z.any().optional(),                          // pre-OCR'd fields (TC ran OCR before submit)
     }).parse(req.body)
-    // resolve TP
     let tpId
     const profile = JSON.parse(req.user.profile || '{}')
     if (req.user.role === 'training_partner') tpId = profile.tpId
     else if (req.user.role === 'training_centre') tpId = profile.parentTpId
     if (!tpId) return res.status(400).json({ error: 'no_tp_context' })
+
     const created = await prisma.placement.create({
       data: {
         traineeId: body.traineeId,
@@ -47,18 +81,15 @@ r.post('/declare', requireRole('training_partner', 'training_centre'), async (re
         joiningDate: new Date(body.joiningDate),
         employmentType: body.employmentType,
         appointmentLetterUrl: body.appointmentLetterUrl ?? null,
+        offerLetterOcr: body.offerLetterOcr ? JSON.stringify(body.offerLetterOcr) : null,
+        offerLetterOcrAt: body.offerLetterOcr ? new Date() : null,
         tpDeclaredAt: new Date(),
         state: 'claimed_unverified',
       },
     })
-    // schedule retention check-ins (30/60/90)
-    const days = [30, 60, 90]
-    for (const m of days) {
-      const due = new Date(new Date(body.joiningDate).getTime() + m * 24 * 3600 * 1000)
-      await prisma.retentionCheckin.create({
-        data: { placementId: created.id, traineeId: body.traineeId, milestone: m, dueAt: due, state: 'pending' },
-      })
-    }
+
+    await seedRetentionMilestones(created)
+
     // create notifications for trainee + employer
     const employer = await prisma.employer.findUnique({ where: { id: body.employerId } })
     if (employer?.adminUserId) {
@@ -76,7 +107,7 @@ r.post('/declare', requireRole('training_partner', 'training_centre'), async (re
       await prisma.notification.create({
         data: {
           type: 'system', title: 'Have you joined this job?', category: 'placement_verification', priority: 'high',
-          message: `${employer?.name || 'Your employer'} — please confirm your joining.`,
+          message: `${employer?.name || 'Your employer'} — please confirm your joining and upload your copy of the offer letter.`,
           targetUserId: trainee.userId,
           action: JSON.stringify({ label: 'Confirm', type: 'OPEN_TRAINEE_PLACEMENT_CONFIRM', payload: { placementId: created.id } }),
         },
@@ -86,47 +117,173 @@ r.post('/declare', requireRole('training_partner', 'training_centre'), async (re
   } catch (e) { next(e) }
 })
 
+// ── Trainee uploads their own copy of the offer letter ───────────────────────
+// Separate from the final confirm action — the trainee can upload, see what we
+// OCR'd, edit/correct fields, then go on to Yes / No / Dispute.
+r.post('/:id/trainee-upload-offer', requireRole('trainee'), async (req, res, next) => {
+  try {
+    const body = z.object({
+      dataUrl: z.string().min(50),
+      ocr: z.any().optional(),                                     // frontend already called /api/ocr/offer-letter
+    }).parse(req.body)
+    const trainee = await prisma.trainee.findUnique({ where: { userId: req.user.id } })
+    const p = await prisma.placement.findUnique({ where: { id: req.params.id } })
+    if (!p) return res.status(404).json({ error: 'not_found' })
+    if (p.traineeId !== trainee?.id) return res.status(403).json({ error: 'not_your_placement' })
+
+    // Merge OCR — prefer the freshest (trainee's). If no OCR sent, keep what
+    // the TC put in. If neither side has any, leave null and the UI will show
+    // a "OCR unavailable, fill manually" affordance.
+    const ocrJson = body.ocr ? JSON.stringify(body.ocr) : p.offerLetterOcr
+    const updated = await prisma.placement.update({
+      where: { id: p.id },
+      data: {
+        offerLetterTraineeUrl: body.dataUrl,
+        offerLetterOcr: ocrJson,
+        offerLetterOcrAt: new Date(),
+      },
+    })
+    res.json({ placement: updated })
+  } catch (e) { next(e) }
+})
+
+// ── Trainee acknowledges / edits OCR-extracted fields ────────────────────────
+r.post('/:id/ocr-ack', requireRole('trainee'), async (req, res, next) => {
+  try {
+    const body = z.object({
+      edits: z.record(z.any()).optional(),                         // any fields trainee corrected
+    }).parse(req.body)
+    const trainee = await prisma.trainee.findUnique({ where: { userId: req.user.id } })
+    const p = await prisma.placement.findUnique({ where: { id: req.params.id } })
+    if (!p) return res.status(404).json({ error: 'not_found' })
+    if (p.traineeId !== trainee?.id) return res.status(403).json({ error: 'not_your_placement' })
+    const updated = await prisma.placement.update({
+      where: { id: p.id },
+      data: {
+        offerLetterTraineeAckAt: new Date(),
+        offerLetterTraineeEdits: body.edits ? JSON.stringify(body.edits) : null,
+      },
+    })
+    res.json({ placement: updated })
+  } catch (e) { next(e) }
+})
+
 // ── Trainee confirms own placement ───────────────────────────────────────────
+// `decision` widens the binary into: yes | no | dispute. (`edit` is just yes
+// with field edits — already captured via /ocr-ack — so we collapse it here.)
 r.post('/:id/trainee-confirm', requireRole('trainee'), async (req, res, next) => {
   try {
     const { id } = req.params
-    const body = z.object({ confirmed: z.boolean(), note: z.string().optional() }).parse(req.body)
+    const body = z.object({
+      decision: z.enum(['yes', 'no', 'dispute']).optional(),
+      confirmed: z.boolean().optional(),                           // legacy compat
+      note: z.string().optional(),
+      denyCategories: z.array(z.string()).optional(),              // when decision === 'no'
+      disputeCategories: z.array(z.string()).optional(),           // when decision === 'dispute'
+    }).parse(req.body)
+    const decision = body.decision ?? (body.confirmed ? 'yes' : 'no')
     const trainee = await prisma.trainee.findUnique({ where: { userId: req.user.id } })
     const p = await prisma.placement.findUnique({ where: { id } })
     if (!p) return res.status(404).json({ error: 'not_found' })
     if (p.traineeId !== trainee?.id) return res.status(403).json({ error: 'not_your_placement' })
-    const data = {
-      traineeConfirmedAt: body.confirmed ? new Date() : null,
-      state: body.confirmed
-        ? (p.employerConfirmedAt ? 'verified' : 'partially_verified')
-        : 'disputed',
-      conflictReason: body.confirmed ? null : (body.note || 'trainee_denied'),
+
+    let data = {}
+    if (decision === 'yes') {
+      data = {
+        traineeConfirmedAt: new Date(),
+        state: p.employerConfirmedAt ? 'verified' : 'partially_verified',
+        conflictReason: null,
+        conflictCategories: null,
+      }
+    } else if (decision === 'no') {
+      data = {
+        traineeConfirmedAt: null,
+        state: 'conflicted',
+        conflictReason: body.note || 'trainee_denied',
+        conflictCategories: JSON.stringify(body.denyCategories || []),
+      }
+    } else if (decision === 'dispute') {
+      // Trainee did join but conditions don't match. Mark disputed AND create
+      // a grievance row capturing the categorised complaint.
+      data = {
+        traineeConfirmedAt: new Date(),                            // joining acknowledged
+        state: 'disputed',
+        conflictReason: body.note || 'trainee_grievance',
+        conflictCategories: JSON.stringify(body.disputeCategories || []),
+      }
+      await prisma.placementGrievance.create({
+        data: {
+          placementId: p.id,
+          raisedByUserId: req.user.id,
+          categories: JSON.stringify(body.disputeCategories || []),
+          note: body.note || null,
+          status: 'open',
+        },
+      })
     }
     const updated = await prisma.placement.update({ where: { id }, data })
 
-    // Nudge the TP so they see the learner's response in their own grievances
-    // / placement-verification feed. Confidence-ladder consequence: TP avg
-    // moves up on confirm, down on dispute.
+    // Nudge TP — same as before, but with richer payload.
     try {
       const tp = p.tpId ? await prisma.trainingPartner.findUnique({ where: { id: p.tpId } }) : null
       if (tp?.adminUserId) {
+        const title =
+          decision === 'yes'     ? 'Trainee confirmed your placement'
+        : decision === 'no'      ? 'Trainee REJECTED your placement claim'
+        :                          'Trainee raised a placement GRIEVANCE'
         await prisma.notification.create({
           data: {
             type: 'system',
-            title: body.confirmed ? 'Trainee confirmed your placement' : 'Trainee DISPUTED your placement',
+            title,
             category: 'placement_verification',
-            priority: body.confirmed ? 'normal' : 'high',
-            message: body.confirmed
-              ? `${trainee?.fullName || 'A trainee'} confirmed they joined ${p?.role || 'the role'} — confidence up to 60%.`
-              : `${trainee?.fullName || 'A trainee'} said they did NOT join this placement. Reason: ${body.note || 'not specified'}.`,
+            priority: decision === 'yes' ? 'normal' : 'high',
+            message: decision === 'yes'
+              ? `${trainee?.name || 'A trainee'} confirmed they joined ${p?.role || 'the role'}.`
+              : decision === 'no'
+                ? `${trainee?.name || 'A trainee'} said they did NOT join. Reasons: ${(body.denyCategories || []).join(', ') || body.note || 'unspecified'}.`
+                : `${trainee?.name || 'A trainee'} says they joined BUT raised concerns: ${(body.disputeCategories || []).join(', ') || body.note || 'unspecified'}.`,
             targetUserId: tp.adminUserId,
             action: JSON.stringify({ label: 'View placement', type: 'OPEN_PLACEMENT', payload: { placementId: id } }),
           },
         })
       }
-    } catch (e) { /* notification best-effort */ }
+    } catch { /* best-effort */ }
 
     res.json({ placement: updated })
+  } catch (e) { next(e) }
+})
+
+// ── Grievance: trainee can also raise standalone grievances later ────────────
+r.post('/:id/grievance', requireRole('trainee'), async (req, res, next) => {
+  try {
+    const body = z.object({
+      categories: z.array(z.string()).min(1),
+      note: z.string().optional(),
+    }).parse(req.body)
+    const trainee = await prisma.trainee.findUnique({ where: { userId: req.user.id } })
+    const p = await prisma.placement.findUnique({ where: { id: req.params.id } })
+    if (!p) return res.status(404).json({ error: 'not_found' })
+    if (p.traineeId !== trainee?.id) return res.status(403).json({ error: 'not_your_placement' })
+    const g = await prisma.placementGrievance.create({
+      data: {
+        placementId: p.id,
+        raisedByUserId: req.user.id,
+        categories: JSON.stringify(body.categories),
+        note: body.note || null,
+        status: 'open',
+      },
+    })
+    res.json({ grievance: g })
+  } catch (e) { next(e) }
+})
+
+r.get('/:id/grievances', async (req, res, next) => {
+  try {
+    const list = await prisma.placementGrievance.findMany({
+      where: { placementId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json({ grievances: list })
   } catch (e) { next(e) }
 })
 
@@ -154,8 +311,6 @@ r.post('/:id/employer-confirm', requireRole('employer'), async (req, res, next) 
       },
     })
 
-    // Nudge the TP — third signal received (or denied). Confidence ladder
-    // advances or breaks at this point.
     try {
       const tp = p.tpId ? await prisma.trainingPartner.findUnique({ where: { id: p.tpId } }) : null
       if (tp?.adminUserId) {
@@ -173,7 +328,7 @@ r.post('/:id/employer-confirm', requireRole('employer'), async (req, res, next) 
           },
         })
       }
-    } catch (e) { /* best-effort */ }
+    } catch { /* best-effort */ }
 
     res.json({ placement: updated })
   } catch (e) { next(e) }
@@ -192,7 +347,6 @@ r.get('/', async (req, res, next) => {
     } else if (role === 'training_partner') {
       where.tpId = profile.tpId
     } else if (role === 'training_centre') {
-      // find batches under this TC then trainees in those batches
       const tc = await prisma.trainingCentre.findUnique({ where: { adminUserId: req.user.id }, include: { batches: { include: { trainees: true } } } })
       const traineeIds = tc?.batches.flatMap(b => b.trainees.map(t => t.id)) || []
       where.traineeId = { in: traineeIds }
@@ -221,6 +375,7 @@ r.get('/:id', async (req, res, next) => {
         tp: true,
         retentionCheckins: { orderBy: { milestone: 'asc' } },
         salarySlips: { orderBy: { month: 'desc' } },
+        grievances: { orderBy: { createdAt: 'desc' } },
       },
     })
     if (!p) return res.status(404).json({ error: 'not_found' })

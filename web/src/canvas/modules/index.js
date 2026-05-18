@@ -104,7 +104,7 @@ const META = {
   placement_confirm:    { title: 'Confirm your placement', subtitle: 'Maker-checker · Trainee step', icon: '🤝' },
   employer_confirm:     { title: 'Confirm a hire', subtitle: 'Maker-checker · Employer step', icon: '✅' },
   placement_declare:    { title: 'Declare a placement', subtitle: 'Training partner / centre step', icon: '📝' },
-  retention_checkin:    { title: 'Retention check-in', subtitle: '30 / 60 / 90 day verification', icon: '📅' },
+  retention_checkin:    { title: 'Retention check-in', subtitle: 'Monthly 12-month flow · salary slips + EPFO', icon: '📅' },
   retention_confirm:    { title: 'Day-90 retention confirmation', subtitle: 'Employer step', icon: '📅' },
   skill_passport:       { title: 'Skill Passport', subtitle: 'Verified credentials & history', icon: '🪪' },
   national_overview:    { title: 'National Overview', subtitle: 'KSK Command Centre', icon: '🇮🇳' },

@@ -18,25 +18,25 @@ datasource db {
 
 model User {
   id           String   @id @default(cuid())
-  role         String   // trainee | trainer | training_centre | training_partner | assessor | ssc | employer | nsdc_officer | funder | stipend_officer
+  role         String // trainee | trainer | training_centre | training_partner | assessor | ssc | employer | nsdc_officer | funder | stipend_officer
   name         String
   phone        String?  @unique
   aadhaar      String?  @unique
   sidhId       String?  @unique
-  passwordHash String?  // for SIDH SSO demo users
+  passwordHash String? // for SIDH SSO demo users
   email        String?
   language     String   @default("en")
-  profile      String   @default("{}")    // JSON blob: role-specific fields (centreId, tpId, sscId, employerId, etc.)
+  profile      String   @default("{}") // JSON blob: role-specific fields (centreId, tpId, sscId, employerId, etc.)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   trainee            Trainee?
-  ownedCentre        TrainingCentre?     @relation("centreAdmin")
-  ownedTp            TrainingPartner?    @relation("tpAdmin")
-  ownedEmployer      Employer?           @relation("employerAdmin")
-  trainerBatches     Batch[]             @relation("trainerOfBatch")
-  assessmentsDone    Assessment[]        @relation("assessorOfAssessment")
-  placementsDeclared Placement[]         @relation("tpDeclarant")
+  ownedCentre        TrainingCentre?  @relation("centreAdmin")
+  ownedTp            TrainingPartner? @relation("tpAdmin")
+  ownedEmployer      Employer?        @relation("employerAdmin")
+  trainerBatches     Batch[]          @relation("trainerOfBatch")
+  assessmentsDone    Assessment[]     @relation("assessorOfAssessment")
+  placementsDeclared Placement[]      @relation("tpDeclarant")
   notifications      Notification[]
   chatThreads        ChatThread[]
 }
@@ -46,46 +46,46 @@ model User {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Sector {
-  id        String   @id @default(cuid())
-  code      String   @unique           // RAS | HLT | TEX | LOG | BFSI | CON ...
+  id        String     @id @default(cuid())
+  code      String     @unique // RAS | HLT | TEX | LOG | BFSI | CON ...
   name      String
   sscId     String?
-  ssc       Ssc?     @relation(fields: [sscId], references: [id])
+  ssc       Ssc?       @relation(fields: [sscId], references: [id])
   jobRoles  JobRole[]
   employers Employer[]
 }
 
 model Ssc {
-  id        String   @id @default(cuid())
-  code      String   @unique
+  id        String            @id @default(cuid())
+  code      String            @unique
   name      String
-  adminId   String?  @unique
+  adminId   String?           @unique
   sectors   Sector[]
   partners  TrainingPartner[]
-  createdAt DateTime @default(now())
+  createdAt DateTime          @default(now())
 }
 
 model Scheme {
-  id           String   @id @default(cuid())
-  code         String   @unique           // PMKVY | NAPS | JSS | DDU_GKY | SIB | PM_VISH | PM_VIKAS | PM_SETU | SAMARTH | NULM | PM_DAKSH | FSP | NJM | NGHM
+  id           String    @id @default(cuid())
+  code         String    @unique // PMKVY | NAPS | JSS | DDU_GKY | SIB | PM_VISH | PM_VIKAS | PM_SETU | SAMARTH | NULM | PM_DAKSH | FSP | NJM | NGHM
   name         String
   ministry     String
-  paymentModel String                      // "per_trainee" | "outcome_based" | "tranches" | "voucher" | "stipend"
+  paymentModel String // "per_trainee" | "outcome_based" | "tranches" | "voucher" | "stipend"
   budgetCr     Float?
-  active       Boolean  @default(true)
+  active       Boolean   @default(true)
   batches      Batch[]
   stipends     Stipend[]
 }
 
 model JobRole {
-  id         String  @id @default(cuid())
-  qpCode     String  @unique               // QP code from NCVET
-  name       String
-  sectorId   String
-  sector     Sector  @relation(fields: [sectorId], references: [id])
-  nsqfLevel  Int
-  tracks     TrackJobRole[]
-  certs      Certificate[]
+  id          String         @id @default(cuid())
+  qpCode      String         @unique // QP code from NCVET
+  name        String
+  sectorId    String
+  sector      Sector         @relation(fields: [sectorId], references: [id])
+  nsqfLevel   Int
+  tracks      TrackJobRole[]
+  certs       Certificate[]
   assessments Assessment[]
 }
 
@@ -94,50 +94,50 @@ model JobRole {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model TrainingPartner {
-  id                 String   @id @default(cuid())
-  code               String   @unique         // TP2024MB001
+  id                 String           @id @default(cuid())
+  code               String           @unique // TP2024MB001
   name               String
-  type               String                   // "NGO" | "PRIVATE" | "ITI" | "GOVT"
-  accreditationState String   @default("accredited") // "pending" | "accredited" | "revoked"
+  type               String // "NGO" | "PRIVATE" | "ITI" | "GOVT"
+  accreditationState String           @default("accredited") // "pending" | "accredited" | "revoked"
   accreditedBy       String?
   parentSscId        String?
-  parentSsc          Ssc?     @relation(fields: [parentSscId], references: [id])
-  adminUserId        String?  @unique
-  adminUser          User?    @relation("tpAdmin", fields: [adminUserId], references: [id])
+  parentSsc          Ssc?             @relation(fields: [parentSscId], references: [id])
+  adminUserId        String?          @unique
+  adminUser          User?            @relation("tpAdmin", fields: [adminUserId], references: [id])
   centres            TrainingCentre[]
   tracks             Track[]
   placements         Placement[]
-  createdAt          DateTime @default(now())
+  createdAt          DateTime         @default(now())
 }
 
 model TrainingCentre {
-  id            String   @id @default(cuid())
-  code          String   @unique             // TC10012001
-  name          String
-  addressLine   String
-  city          String
-  state         String
-  pincode       String
-  capacity      Int
-  isIti         Boolean  @default(false)
-  parentTpId    String
-  parentTp      TrainingPartner @relation(fields: [parentTpId], references: [id])
-  adminUserId   String?  @unique
-  adminUser     User?    @relation("centreAdmin", fields: [adminUserId], references: [id])
-  batches       Batch[]
-  createdAt     DateTime @default(now())
+  id          String          @id @default(cuid())
+  code        String          @unique // TC10012001
+  name        String
+  addressLine String
+  city        String
+  state       String
+  pincode     String
+  capacity    Int
+  isIti       Boolean         @default(false)
+  parentTpId  String
+  parentTp    TrainingPartner @relation(fields: [parentTpId], references: [id])
+  adminUserId String?         @unique
+  adminUser   User?           @relation("centreAdmin", fields: [adminUserId], references: [id])
+  batches     Batch[]
+  createdAt   DateTime        @default(now())
 }
 
 model Track {
-  id          String   @id @default(cuid())
-  name        String
-  tpId        String
-  tp          TrainingPartner @relation(fields: [tpId], references: [id])
+  id           String          @id @default(cuid())
+  name         String
+  tpId         String
+  tp           TrainingPartner @relation(fields: [tpId], references: [id])
   durationDays Int
   schemeId     String?
   description  String?
-  jobRoles    TrackJobRole[]
-  batches     Batch[]
+  jobRoles     TrackJobRole[]
+  batches      Batch[]
 }
 
 model TrackJobRole {
@@ -151,24 +151,24 @@ model TrackJobRole {
 }
 
 model Batch {
-  id            String   @id @default(cuid())
-  code          String   @unique
-  name          String
-  centreId      String
-  centre        TrainingCentre @relation(fields: [centreId], references: [id])
-  trackId       String
-  track         Track    @relation(fields: [trackId], references: [id])
-  trainerId     String?
-  trainer       User?    @relation("trainerOfBatch", fields: [trainerId], references: [id])
-  schemeId      String
-  scheme        Scheme   @relation(fields: [schemeId], references: [id])
-  startDate     DateTime
-  endDate       DateTime
-  capacity      Int
-  state         String   @default("scheduled") // scheduled | running | completed | cancelled
-  trainees      Trainee[]
-  attendance    Attendance[]
-  createdAt     DateTime @default(now())
+  id         String         @id @default(cuid())
+  code       String         @unique
+  name       String
+  centreId   String
+  centre     TrainingCentre @relation(fields: [centreId], references: [id])
+  trackId    String
+  track      Track          @relation(fields: [trackId], references: [id])
+  trainerId  String?
+  trainer    User?          @relation("trainerOfBatch", fields: [trainerId], references: [id])
+  schemeId   String
+  scheme     Scheme         @relation(fields: [schemeId], references: [id])
+  startDate  DateTime
+  endDate    DateTime
+  capacity   Int
+  state      String         @default("scheduled") // scheduled | running | completed | cancelled
+  trainees   Trainee[]
+  attendance Attendance[]
+  createdAt  DateTime       @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,37 +176,44 @@ model Batch {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Trainee {
-  id                     String   @id @default(cuid())
-  userId                 String   @unique
-  user                   User     @relation(fields: [userId], references: [id])
-  name                   String
-  aadhaar                String   @unique
-  phone                  String
-  gender                 String                            // M | F | O
-  dob                    DateTime
-  education              String                            // "10th" | "12th" | "ITI" | "Diploma" | "Graduate"
-  state                  String
-  district               String
-  pincode                String
-  batchId                String?
-  batch                  Batch?   @relation(fields: [batchId], references: [id])
-  enrolmentDeclaredAt    DateTime?                         // when TP declared
-  enrolmentConfirmedAt   DateTime?                         // when trainee confirmed (maker-checker)
-  enrolmentState         String   @default("none")         // none | claimed | confirmed | flagged
-  dropoutAt              DateTime?
-  dropoutReason          String?
-  category               String?                           // SC | ST | OBC | GEN | EWS
-  pwdStatus              Boolean  @default(false)
-  minority               Boolean  @default(false)
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id])
+  name                 String
+  aadhaar              String    @unique
+  phone                String
+  gender               String // M | F | O
+  dob                  DateTime
+  education            String // "10th" | "12th" | "ITI" | "Diploma" | "Graduate"
+  state                String
+  district             String
+  pincode              String
+  batchId              String?
+  batch                Batch?    @relation(fields: [batchId], references: [id])
+  enrolmentDeclaredAt  DateTime? // when TP declared
+  enrolmentConfirmedAt DateTime? // when trainee confirmed (maker-checker)
+  enrolmentState       String    @default("none") // none | claimed | confirmed | flagged
+  dropoutAt            DateTime?
+  dropoutReason        String?
+  category             String? // SC | ST | OBC | GEN | EWS
+  pwdStatus            Boolean   @default(false)
+  minority             Boolean   @default(false)
 
-  attendance             Attendance[]
-  assessments            Assessment[]
-  certificates           Certificate[]
-  placements             Placement[]
-  stipends               Stipend[]
-  retentionCheckins      RetentionCheckin[]
-  salarySlips            SalarySlip[]
-  createdAt              DateTime @default(now())
+  // EPFO linking — used by retention verification to auto-confirm employment
+  // by cross-checking the trainee's UAN against the placement employer.
+  epfoUan          String? // 12-digit Universal Account Number
+  epfoLinkedAt     DateTime?
+  epfoEmployerName String? // last-seen employer from EPFO snapshot
+  epfoLastSyncAt   DateTime?
+
+  attendance        Attendance[]
+  assessments       Assessment[]
+  certificates      Certificate[]
+  placements        Placement[]
+  stipends          Stipend[]
+  retentionCheckins RetentionCheckin[]
+  salarySlips       SalarySlip[]
+  createdAt         DateTime           @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,17 +221,17 @@ model Trainee {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Attendance {
-  id              String   @id @default(cuid())
-  batchId         String
-  batch           Batch    @relation(fields: [batchId], references: [id])
-  traineeId       String
-  trainee         Trainee  @relation(fields: [traineeId], references: [id])
-  date            DateTime
-  trainerMark     String?                  // present | absent | half-day | null
-  traineeMark     String?                  // present | absent | null (weekly self-report)
-  state           String   @default("trainer-only") // trainer-only | dual-confirmed | conflicted
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String   @id @default(cuid())
+  batchId     String
+  batch       Batch    @relation(fields: [batchId], references: [id])
+  traineeId   String
+  trainee     Trainee  @relation(fields: [traineeId], references: [id])
+  date        DateTime
+  trainerMark String? // present | absent | half-day | null
+  traineeMark String? // present | absent | null (weekly self-report)
+  state       String   @default("trainer-only") // trainer-only | dual-confirmed | conflicted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([batchId, traineeId, date])
 }
@@ -234,22 +241,22 @@ model Attendance {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Assessment {
-  id                String   @id @default(cuid())
-  traineeId         String
-  trainee           Trainee  @relation(fields: [traineeId], references: [id])
-  jobRoleId         String
-  jobRole           JobRole  @relation(fields: [jobRoleId], references: [id])
-  assessorId        String
-  assessor          User     @relation("assessorOfAssessment", fields: [assessorId], references: [id])
-  scheduledAt       DateTime
-  conductedAt       DateTime?
-  result            String?                  // pass | fail | reattempt
-  score             Int?
-  modality          String   @default("mixed") // oral | ocr | mixed | viva
-  evidence          String   @default("[]")    // JSON: [{type, ref, capturedAt}]
-  traineeAckAt      DateTime?
-  state             String   @default("scheduled") // scheduled | conducted | acked | conflicted
-  createdAt         DateTime @default(now())
+  id           String    @id @default(cuid())
+  traineeId    String
+  trainee      Trainee   @relation(fields: [traineeId], references: [id])
+  jobRoleId    String
+  jobRole      JobRole   @relation(fields: [jobRoleId], references: [id])
+  assessorId   String
+  assessor     User      @relation("assessorOfAssessment", fields: [assessorId], references: [id])
+  scheduledAt  DateTime
+  conductedAt  DateTime?
+  result       String? // pass | fail | reattempt
+  score        Int?
+  modality     String    @default("mixed") // oral | ocr | mixed | viva
+  evidence     String    @default("[]") // JSON: [{type, ref, capturedAt}]
+  traineeAckAt DateTime?
+  state        String    @default("scheduled") // scheduled | conducted | acked | conflicted
+  createdAt    DateTime  @default(now())
 }
 
 model Certificate {
@@ -269,66 +276,113 @@ model Certificate {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Placement {
-  id                    String   @id @default(cuid())
-  traineeId             String
-  trainee               Trainee  @relation(fields: [traineeId], references: [id])
-  employerId            String
-  employer              Employer @relation(fields: [employerId], references: [id])
-  tpId                  String
-  tp                    TrainingPartner @relation(fields: [tpId], references: [id])
-  declaredByUserId      String                                // user who declared (usually TP admin or TC admin)
-  declaredByUser        User     @relation("tpDeclarant", fields: [declaredByUserId], references: [id])
-  role                  String                                // job title at employer
-  ctcMonthly            Int                                   // INR / month
-  joiningDate           DateTime
-  employmentType        String                                // wage | self | apprenticeship
-  appointmentLetterUrl  String?
+  id                   String          @id @default(cuid())
+  traineeId            String
+  trainee              Trainee         @relation(fields: [traineeId], references: [id])
+  employerId           String
+  employer             Employer        @relation(fields: [employerId], references: [id])
+  tpId                 String
+  tp                   TrainingPartner @relation(fields: [tpId], references: [id])
+  declaredByUserId     String // user who declared (usually TP admin or TC admin)
+  declaredByUser       User            @relation("tpDeclarant", fields: [declaredByUserId], references: [id])
+  role                 String // job title at employer
+  ctcMonthly           Int // INR / month
+  joiningDate          DateTime
+  employmentType       String // wage | self | apprenticeship
+  appointmentLetterUrl String? // TC-uploaded offer letter (base64 data URL or remote URL)
 
-  tpDeclaredAt          DateTime
-  traineeConfirmedAt    DateTime?
-  employerConfirmedAt   DateTime?
-  state                 String   @default("claimed_unverified") // claimed_unverified | partially_verified | verified | conflicted | disputed
-  conflictReason        String?
-  paymentBlockReason    String?
+  // OCR-extracted fields from offer letter — populated by /api/ocr/offer-letter
+  // (gpt-4o vision). Both TC and trainee uploads run through the same extractor;
+  // the trainee then confirms each field on PlacementConfirmCanvas.
+  offerLetterTraineeUrl   String? // trainee-uploaded copy (independent signal)
+  offerLetterOcr          String? // JSON: { placementDate, onboardingDate, salary, noticePeriod, joiningDate, venue, confidence }
+  offerLetterOcrAt        DateTime?
+  offerLetterTraineeAckAt DateTime? // trainee confirmed OCR-extracted fields
+  offerLetterTraineeEdits String? // JSON: any field-level corrections trainee made
 
-  retentionCheckins     RetentionCheckin[]
-  salarySlips           SalarySlip[]
+  tpDeclaredAt        DateTime
+  traineeConfirmedAt  DateTime?
+  employerConfirmedAt DateTime?
+  state               String    @default("claimed_unverified") // claimed_unverified | partially_verified | verified | conflicted | disputed
+  conflictReason      String?
+  conflictCategories  String? // JSON list — categorized "No" reasons (no_interview, no_recruiter_visit, etc.)
+  paymentBlockReason  String?
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  retentionCheckins RetentionCheckin[]
+  salarySlips       SalarySlip[]
+  grievances        PlacementGrievance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RetentionCheckin {
-  id                    String   @id @default(cuid())
-  placementId           String
-  placement             Placement @relation(fields: [placementId], references: [id])
-  traineeId             String
-  trainee               Trainee  @relation(fields: [traineeId], references: [id])
-  milestone             Int                                  // 30 | 60 | 90 | 180 | 365
-  dueAt                 DateTime
+  id          String    @id @default(cuid())
+  placementId String
+  placement   Placement @relation(fields: [placementId], references: [id])
+  traineeId   String
+  trainee     Trainee   @relation(fields: [traineeId], references: [id])
+  milestone   Int // month number 1..12 (was 30/60/90 days; now monthly)
+  dueAt       DateTime
+  ownerRole   String    @default("trainee") // training_centre (m1-3) | trainee (m4-12) — who is primarily on the hook
 
-  traineeRespondedAt    DateTime?
-  traineeStatus         String?                              // employed | not_employed | switched
-  traineeNote           String?
+  // Training Centre signal (months 1-3 only) — salary slip backed.
+  tcRespondedAt     DateTime?
+  tcStatus          String? // employed | not_employed
+  tcSalarySlipUrl   String? // monthly salary slip (data URL or remote URL)
+  tcSalarySlipMonth String? // YYYY-MM the slip covers
+  tcNote            String?
 
-  employerRespondedAt   DateTime?
-  employerStatus        String?                              // employed | not_employed
-  employerNote          String?
+  // Trainee signal — required for every milestone. Trainee uploads evidence
+  // (ID badge photo, pay slip, geo-tagged selfie at venue, etc.).
+  traineeRespondedAt DateTime?
+  traineeStatus      String? // employed | not_employed | switched
+  traineeNote        String?
+  traineeEvidenceUrl String? // evidence the trainee uploaded
 
-  state                 String   @default("pending")         // pending | dual_confirmed | conflicted | trainee_only | employer_only
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  // Employer signal — kept for the legacy 90-day flow; not required after split.
+  employerRespondedAt DateTime?
+  employerStatus      String? // employed | not_employed
+  employerNote        String?
+
+  // EPFO auto-verification signal — system-confirmed by matching trainee UAN
+  // against placement employer in the (mocked) EPFO snapshot.
+  epfoCheckedAt    DateTime?
+  epfoVerified     Boolean   @default(false)
+  epfoEmployerName String? // employer name as returned by EPFO
+
+  state     String   @default("pending") // pending | dual_confirmed | conflicted | trainee_only | employer_only | tc_only | epfo_verified
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([placementId, milestone])
 }
 
+// Trainee-raised dispute on a placement. Maker-checker fail mode #2: the
+// placement may have happened, but conditions don't match what was promised
+// (lower salary, delayed joining, different role, etc.). Goes to TP + SSC +
+// NSDC officer feeds; payment block lifts only after resolution.
+model PlacementGrievance {
+  id             String    @id @default(cuid())
+  placementId    String
+  placement      Placement @relation(fields: [placementId], references: [id])
+  raisedByUserId String
+  categories     String    @default("[]") // JSON list — salary_lower | joining_delayed | role_different | venue_different | no_appointment_letter | notice_unfair | other
+  note           String?
+  status         String    @default("open") // open | investigating | resolved | rejected
+  resolvedAt     DateTime?
+  resolutionNote String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
 model SalarySlip {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   placementId     String
   placement       Placement @relation(fields: [placementId], references: [id])
   traineeId       String
-  trainee         Trainee  @relation(fields: [traineeId], references: [id])
-  month           String                                       // YYYY-MM
+  trainee         Trainee   @relation(fields: [traineeId], references: [id])
+  month           String // YYYY-MM
   grossSalary     Int
   netSalary       Int?
   employerName    String
@@ -336,10 +390,10 @@ model SalarySlip {
   esicNumber      String?
   fileUrl         String?
   ocrConfidence   Float?
-  ocrExtract      String   @default("{}")                      // JSON
+  ocrExtract      String    @default("{}") // JSON
   employerAckedAt DateTime?
-  state           String   @default("uploaded")                // uploaded | ocr_processed | acked | flagged
-  createdAt       DateTime @default(now())
+  state           String    @default("uploaded") // uploaded | ocr_processed | acked | flagged
+  createdAt       DateTime  @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -347,12 +401,12 @@ model SalarySlip {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Employer {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String  @id @default(cuid())
+  code        String  @unique
   name        String
-  type        String                                            // formal | informal | self
+  type        String // formal | informal | self
   sectorId    String?
-  sector      Sector?  @relation(fields: [sectorId], references: [id])
+  sector      Sector? @relation(fields: [sectorId], references: [id])
   pincode     String
   city        String
   state       String
@@ -360,25 +414,25 @@ model Employer {
   esic        String?
   gstin       String?
   contactName String?
-  adminUserId String?  @unique
-  adminUser   User?    @relation("employerAdmin", fields: [adminUserId], references: [id])
+  adminUserId String? @unique
+  adminUser   User?   @relation("employerAdmin", fields: [adminUserId], references: [id])
 
   placements  Placement[]
   jobPostings JobPosting[]
-  createdAt   DateTime @default(now())
+  createdAt   DateTime     @default(now())
 }
 
 model JobPosting {
-  id            String   @id @default(cuid())
-  employerId    String
-  employer      Employer @relation(fields: [employerId], references: [id])
-  title         String
-  jobRoleQp     String?
-  ctcMonthly    Int
-  location      String
-  openings      Int
-  state         String   @default("open")                        // open | closed | filled
-  createdAt     DateTime @default(now())
+  id         String   @id @default(cuid())
+  employerId String
+  employer   Employer @relation(fields: [employerId], references: [id])
+  title      String
+  jobRoleQp  String?
+  ctcMonthly Int
+  location   String
+  openings   Int
+  state      String   @default("open") // open | closed | filled
+  createdAt  DateTime @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -386,20 +440,20 @@ model JobPosting {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Stipend {
-  id              String   @id @default(cuid())
-  traineeId       String
-  trainee         Trainee  @relation(fields: [traineeId], references: [id])
-  schemeId        String
-  scheme          Scheme   @relation(fields: [schemeId], references: [id])
-  amount          Int
-  month           String                                          // YYYY-MM
-  disbursalState  String   @default("pending")                    // pending | success | failed | retried | reversed
-  utr             String?
-  failureReason   String?
-  retryCount      Int      @default(0)
-  scheduledAt     DateTime
-  disbursedAt     DateTime?
-  createdAt       DateTime @default(now())
+  id             String    @id @default(cuid())
+  traineeId      String
+  trainee        Trainee   @relation(fields: [traineeId], references: [id])
+  schemeId       String
+  scheme         Scheme    @relation(fields: [schemeId], references: [id])
+  amount         Int
+  month          String // YYYY-MM
+  disbursalState String    @default("pending") // pending | success | failed | retried | reversed
+  utr            String?
+  failureReason  String?
+  retryCount     Int       @default(0)
+  scheduledAt    DateTime
+  disbursedAt    DateTime?
+  createdAt      DateTime  @default(now())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -407,70 +461,70 @@ model Stipend {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Notification {
-  id            String   @id @default(cuid())
-  type          String                                              // broadcast | reminder | system
-  title         String
-  message       String
-  category      String
-  priority      String   @default("normal")                         // low | normal | high | urgent
-  module        String?
-  targetRoles   String   @default("[]")                             // JSON string array
-  targetUserId  String?
-  user          User?    @relation(fields: [targetUserId], references: [id])
-  action        String?                                             // JSON: { label, type, payload }
-  scheduledAt   DateTime @default(now())
-  deliveredAt   DateTime?
-  expiresAt     DateTime?
-  readAt        DateTime?
-  dismissedAt   DateTime?
-  createdAt     DateTime @default(now())
+  id           String    @id @default(cuid())
+  type         String // broadcast | reminder | system
+  title        String
+  message      String
+  category     String
+  priority     String    @default("normal") // low | normal | high | urgent
+  module       String?
+  targetRoles  String    @default("[]") // JSON string array
+  targetUserId String?
+  user         User?     @relation(fields: [targetUserId], references: [id])
+  action       String? // JSON: { label, type, payload }
+  scheduledAt  DateTime  @default(now())
+  deliveredAt  DateTime?
+  expiresAt    DateTime?
+  readAt       DateTime?
+  dismissedAt  DateTime?
+  createdAt    DateTime  @default(now())
 }
 
 model ChatThread {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  title      String
-  bot        String?                                                // bot id this thread is tied to
-  canvasState String  @default("{}")                                // JSON
-  toolState  String   @default("{}")                                // JSON
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  messages   ChatMessage[]
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  title       String
+  bot         String? // bot id this thread is tied to
+  canvasState String        @default("{}") // JSON
+  toolState   String        @default("{}") // JSON
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  messages    ChatMessage[]
 }
 
 model ChatMessage {
   id        String     @id @default(cuid())
   threadId  String
   thread    ChatThread @relation(fields: [threadId], references: [id])
-  role      String                                                  // user | bot
+  role      String // user | bot
   text      String
   html      String?
-  actions   String?                                                 // JSON
-  meta      String?                                                 // JSON
+  actions   String? // JSON
+  meta      String? // JSON
   createdAt DateTime   @default(now())
 }
 
 model KnowledgeChunk {
-  id          String   @id @default(cuid())
-  source      String                                                // file slug
-  heading     String?
-  content     String
-  embedding   String                                                // JSON-encoded float[] (sqlite-vec optional later)
-  roleFilter  String?                                               // "all" | "trainee,trainer,..."
-  module      String?
-  tokens      Int      @default(0)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  source     String // file slug
+  heading    String?
+  content    String
+  embedding  String // JSON-encoded float[] (sqlite-vec optional later)
+  roleFilter String? // "all" | "trainee,trainer,..."
+  module     String?
+  tokens     Int      @default(0)
+  createdAt  DateTime @default(now())
 }
 
 model OtpCode {
-  id        String   @id @default(cuid())
-  channel   String                                                   // phone | aadhaar
-  identifier String                                                  // phone or aadhaar number
-  code      String
-  expiresAt DateTime
-  consumed  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  channel    String // phone | aadhaar
+  identifier String // phone or aadhaar number
+  code       String
+  expiresAt  DateTime
+  consumed   Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
   @@index([identifier])
 }

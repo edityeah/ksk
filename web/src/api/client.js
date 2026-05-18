@@ -67,9 +67,24 @@ export const api = {
   traineeConfirmPlc: (id, body) => req('POST', `/api/placements/${id}/trainee-confirm`, body),
   employerConfirmPlc:(id, body) => req('POST', `/api/placements/${id}/employer-confirm`, body),
 
-  retentionDue:        () => req('GET', '/api/retention/due'),
+  // placement — offer letter + OCR + grievance
+  ocrOfferLetter:        (dataUrl, filename) => req('POST', '/api/ocr/offer-letter', { dataUrl, filename }),
+  traineeUploadOffer:    (id, body) => req('POST', `/api/placements/${id}/trainee-upload-offer`, body),
+  ocrAckPlacement:       (id, edits) => req('POST', `/api/placements/${id}/ocr-ack`, { edits }),
+  raiseGrievance:        (id, body) => req('POST', `/api/placements/${id}/grievance`, body),
+  grievances:            (id) => req('GET', `/api/placements/${id}/grievances`),
+
+  retentionDue:            () => req('GET', '/api/retention/due'),
   retentionTraineeRespond: (id, body) => req('POST', `/api/retention/${id}/trainee-respond`, body),
   retentionEmployerRespond:(id, body) => req('POST', `/api/retention/${id}/employer-respond`, body),
+  retentionTcRespond:      (id, body) => req('POST', `/api/retention/${id}/tc-respond`, body),
+  retentionByPlacement:    (placementId) => req('GET', `/api/retention/by-placement/${placementId}`),
+
+  // EPFO
+  epfoStatus: () => req('GET', '/api/epfo/status'),
+  epfoLink:   (uan) => req('POST', '/api/epfo/link', { uan }),
+  epfoUnlink: () => req('POST', '/api/epfo/unlink', {}),
+  epfoVerify: (body) => req('POST', '/api/epfo/verify', body),
 
   trainees:    () => req('GET', '/api/trainees'),
   trainee:     (id) => req('GET', `/api/trainees/${id}`),

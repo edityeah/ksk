@@ -29,6 +29,8 @@ import whisperRoutes from './routes/whisper.js'
 import realtimeRoutes from './routes/realtime.js'
 import dashboardRoutes from './routes/dashboards.js'
 import accreditationRoutes from './routes/accreditation.js'
+import ocrRoutes from './routes/ocr.js'
+import epfoRoutes from './routes/epfo.js'
 
 const app = express()
 
@@ -78,6 +80,8 @@ app.use('/api/whisper', whisperRoutes)
 app.use('/api/realtime', realtimeRoutes)
 app.use('/api/dashboards', dashboardRoutes)
 app.use('/api/accreditation', accreditationRoutes)
+app.use('/api/ocr', ocrRoutes)
+app.use('/api/epfo', epfoRoutes)
 
 // ─── Production: also serve the built Vite SPA from /web/dist ────────────────
 // In production (Render), the same Express service hosts both /api/* and the

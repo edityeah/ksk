@@ -446,27 +446,33 @@ async function main() {
   })
 
   // ── Retention checkins ──────────────────────────────────────────────────
-  console.log('[seed] retention checkins…')
-  // Rani — 30 dual_confirmed, 60 pending, 90 not due
-  await prisma.retentionCheckin.create({
-    data: { placementId: placementRani.id, traineeId: rani.id, milestone: 30, dueAt: daysAgo(0),
-            traineeRespondedAt: daysAgo(2), traineeStatus: 'employed', state: 'trainee_only' },
-  })
-  await prisma.retentionCheckin.create({
-    data: { placementId: placementRani.id, traineeId: rani.id, milestone: 60, dueAt: daysFromNow(30), state: 'pending' },
-  })
-  await prisma.retentionCheckin.create({
-    data: { placementId: placementRani.id, traineeId: rani.id, milestone: 90, dueAt: daysFromNow(60), state: 'pending' },
-  })
-  // Imran — 30 pending
-  await prisma.retentionCheckin.create({
-    data: { placementId: placementImran.id, traineeId: imran.id, milestone: 30, dueAt: daysFromNow(15), state: 'pending' },
-  })
-  await prisma.retentionCheckin.create({
-    data: { placementId: placementImran.id, traineeId: imran.id, milestone: 60, dueAt: daysFromNow(45), state: 'pending' },
-  })
-  await prisma.retentionCheckin.create({
-    data: { placementId: placementImran.id, traineeId: imran.id, milestone: 90, dueAt: daysFromNow(75), state: 'pending' },
+  console.log('[seed] retention checkins (12 monthly)…')
+  // Generate 12 monthly check-ins per placement; first 3 TC-owned, rest trainee-led.
+  // Months that are "already due" get sample state so demo flows have something to act on.
+  async function seedTwelve(placementId, traineeId, joinOffset) {
+    for (let m = 1; m <= 12; m++) {
+      const dueAt = daysFromNow(joinOffset + (m * 30))
+      const ownerRole = m <= 3 ? 'training_centre' : 'trainee'
+      await prisma.retentionCheckin.create({
+        data: { placementId, traineeId, milestone: m, dueAt, ownerRole, state: 'pending' },
+      })
+    }
+  }
+  // Rani joined ~30 days ago — month 1 is overdue, month 2 due soon
+  await seedTwelve(placementRani.id, rani.id, -30)
+  // Imran joined 15 days from now — nothing overdue yet
+  await seedTwelve(placementImran.id, imran.id, 15)
+
+  // Pre-fill rani's month 1 (TC slip uploaded + trainee confirmed) so the
+  // dashboard has at least one "dual_confirmed" data point.
+  await prisma.retentionCheckin.updateMany({
+    where: { placementId: placementRani.id, milestone: 1 },
+    data: {
+      tcRespondedAt: daysAgo(3), tcStatus: 'employed',
+      tcSalarySlipUrl: '/demo/slip_rani_m1.pdf', tcSalarySlipMonth: '2026-04',
+      traineeRespondedAt: daysAgo(2), traineeStatus: 'employed',
+      state: 'dual_confirmed',
+    },
   })
 
   // ── Salary slips ────────────────────────────────────────────────────────
