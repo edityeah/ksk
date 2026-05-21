@@ -3,7 +3,13 @@
 //
 // We accept base64 data URLs in the request body (5mb JSON limit on the app
 // already; no multer needed). The actual file bytes never touch local disk —
-// we just forward them to gpt-4o vision and persist the extracted fields.
+// we just forward them to OpenAI and persist the extracted fields.
+//
+// Two input shapes are supported:
+//   • image/*           → sent as `image_url` content (gpt-4o vision)
+//   • application/pdf   → sent as `file` content (gpt-4o file input). The
+//                         model receives the rendered pages directly; no
+//                         client-side rasterisation needed.
 //
 // When OPENAI_API_KEY is missing we still return a deterministic, plausible
 // stub so the demo flow doesn't dead-end without a key.
@@ -15,6 +21,11 @@ import { requireAuth } from '../auth/middleware.js'
 
 const r = Router()
 r.use(requireAuth)
+
+function mimeOfDataUrl(dataUrl) {
+  const m = /^data:([^;,]+)[;,]/i.exec(dataUrl || '')
+  return m ? m[1].toLowerCase() : null
+}
 
 const OFFER_LETTER_SCHEMA_HINT = `{
   "placementDate":   "ISO date string when the placement was finalised (offer issued)",
@@ -53,10 +64,28 @@ r.post('/offer-letter', async (req, res, next) => {
 
     if (!hasOpenAI()) return res.json({ ocr: stubOcr() })
 
-    // gpt-4o accepts image URLs OR base64 data URLs directly under image_url.
-    // PDFs aren't vision-readable — caller should send a rendered page image
-    // for PDFs (frontend handles it via pdf.js → canvas → data URL).
-    const sys = `You are a precise document extraction engine. The user will send you the image of an Indian employment offer / appointment letter. Extract the fields and return ONLY a JSON object matching the schema. Use ISO dates (YYYY-MM-DD). If a field is not clearly stated, set it to null and lower the confidence. Salary should be the MONTHLY gross figure in INR (integer); if only annual CTC is given, divide by 12.`
+    const mime = mimeOfDataUrl(body.dataUrl)
+    const isPdf = mime === 'application/pdf'
+    const isImage = mime?.startsWith('image/')
+    if (!isPdf && !isImage) {
+      return res.status(400).json({ error: 'unsupported_mime', mime })
+    }
+
+    // Content shape depends on input: PDFs use the `file` part type (gpt-4o
+    // reads them natively); images use `image_url`. Either way we get back a
+    // single JSON object matching OFFER_LETTER_SCHEMA_HINT.
+    const sys = `You are a precise document extraction engine. The user will send you an Indian employment offer / appointment letter as ${isPdf ? 'a PDF' : 'an image'}. Extract the fields and return ONLY a JSON object matching the schema. Use ISO dates (YYYY-MM-DD). If a field is not clearly stated, set it to null and lower the confidence. Salary should be the MONTHLY gross figure in INR (integer); if only annual CTC is given, divide by 12.`
+
+    const userContent = isPdf
+      ? [
+          { type: 'text', text: 'Extract the offer letter fields from this PDF. Return JSON only.' },
+          { type: 'file', file: { file_data: body.dataUrl, filename: body.filename || 'offer-letter.pdf' } },
+        ]
+      : [
+          { type: 'text', text: 'Extract the offer letter fields from this image. Return JSON only.' },
+          { type: 'image_url', image_url: { url: body.dataUrl } },
+        ]
+
     const resp = await openai.chat.completions.create({
       model: CHAT_MODEL,
       response_format: { type: 'json_object' },
@@ -64,13 +93,7 @@ r.post('/offer-letter', async (req, res, next) => {
       max_tokens: 800,
       messages: [
         { role: 'system', content: sys + `\nSchema: ${OFFER_LETTER_SCHEMA_HINT}` },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Extract the offer letter fields. Return JSON only.' },
-            { type: 'image_url', image_url: { url: body.dataUrl } },
-          ],
-        },
+        { role: 'user', content: userContent },
       ],
     })
     const txt = resp.choices?.[0]?.message?.content

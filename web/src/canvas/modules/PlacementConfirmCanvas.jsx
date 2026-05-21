@@ -19,7 +19,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../api/client.js'
 import { useApp } from '../../context/AppContext.jsx'
 import { applyCredit } from '../../utils/aiCredits.js'
-import { readFileAsDataUrl, ACCEPT_IMAGE } from '../../utils/fileUpload.js'
+import { readFileAsDataUrl, ACCEPT_LETTER } from '../../utils/fileUpload.js'
+import FilePreview from '../../components/FilePreview.jsx'
 import {
   CheckCircle2, XCircle, IndianRupee, Calendar, Building2,
   ShieldCheck, AlertTriangle, Briefcase, MapPin, Upload, Loader2,
@@ -250,16 +251,16 @@ export default function PlacementConfirmCanvas({ context }) {
                 <div className="rounded-xl border-2 border-dashed border-bdr px-4 py-5 text-center cursor-pointer hover:border-violet-500 hover:bg-violet-50/30">
                   <Upload className="w-5 h-5 text-violet-600 mx-auto mb-1" />
                   <div className="text-[12px] font-bold text-txt-primary">Tap to upload your copy</div>
-                  <div className="text-[11px] text-txt-secondary mt-0.5">JPG / PNG, up to 4 MB</div>
+                  <div className="text-[11px] text-txt-secondary mt-0.5">PDF or photo (JPG / PNG / WebP), up to 4 MB</div>
                 </div>
-                <input type="file" accept={ACCEPT_IMAGE} className="hidden"
+                <input type="file" accept={ACCEPT_LETTER} className="hidden"
                   onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
               </label>
             )}
             {(traineeServerUrl || traineeLetterUrl) && (
               <label className="inline-flex items-center gap-2 text-[11px] text-violet-700 cursor-pointer">
                 <RefreshCw className="w-3 h-3" /> Replace
-                <input type="file" accept={ACCEPT_IMAGE} className="hidden"
+                <input type="file" accept={ACCEPT_LETTER} className="hidden"
                   onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
               </label>
             )}
@@ -389,7 +390,7 @@ function LetterThumb({ label, url }) {
   return (
     <div className="rounded-xl border border-bdr-light bg-white p-2">
       <div className="text-[10px] uppercase tracking-wider font-bold text-txt-tertiary mb-1">{label}</div>
-      <img src={url} alt={label} className="w-full h-32 object-cover rounded-md" />
+      <FilePreview url={url} alt={label} size="lg" />
     </div>
   )
 }

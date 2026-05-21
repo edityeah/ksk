@@ -1,17 +1,21 @@
-// File → base64 data URL helpers + a thin <FileDropzone /> component.
+// File → base64 data URL helpers.
 //
 // We don't have multer on the backend; every "upload" is a JSON POST whose
 // body carries a base64 data URL. Express body limit is 5 MB which fits the
 // scanned-PDF / phone-photo cases that demo flows produce.
 //
-// PDFs aren't directly vision-readable by gpt-4o, so for PDF inputs we render
-// the first page to a JPEG via pdf.js. To avoid adding pdf.js as a dep we just
-// reject PDFs with a friendly message — the demo flow asks users to upload a
-// photo of the letter (camera or image file), which is the realistic mobile
-// path anyway.
+// PDFs are supported end-to-end: gpt-4o accepts inline PDF data URLs via the
+// `file` content type in chat completions, so we don't need client-side
+// rasterisation. The same dropzone happily takes images or PDFs.
 
-export const ACCEPT_IMAGE = 'image/png,image/jpeg,image/webp,image/heic'
+export const ACCEPT_LETTER = 'image/png,image/jpeg,image/webp,image/heic,application/pdf'
+// Backwards-compat alias — older imports still reference ACCEPT_IMAGE.
+export const ACCEPT_IMAGE = ACCEPT_LETTER
 export const MAX_SIZE_MB = 4
+
+export function isPdfDataUrl(dataUrl) {
+  return /^data:application\/pdf[;,]/i.test(dataUrl || '')
+}
 
 export function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {

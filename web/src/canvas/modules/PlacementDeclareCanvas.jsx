@@ -10,7 +10,8 @@ import { useEffect, useState } from 'react'
 import { api } from '../../api/client.js'
 import { useApp } from '../../context/AppContext.jsx'
 import VerificationBadge from './_VerificationBadge.jsx'
-import { readFileAsDataUrl, ACCEPT_IMAGE } from '../../utils/fileUpload.js'
+import { readFileAsDataUrl, ACCEPT_LETTER } from '../../utils/fileUpload.js'
+import FilePreview from '../../components/FilePreview.jsx'
 import {
   Upload, FileText, CheckCircle2, RefreshCw, AlertTriangle, Loader2,
   IndianRupee, Calendar, MapPin, Briefcase, Building2,
@@ -128,15 +129,15 @@ export default function PlacementDeclareCanvas() {
               <div className="rounded-xl border-2 border-dashed border-bdr px-4 py-6 text-center cursor-pointer hover:border-violet-500 hover:bg-violet-50/30">
                 <Upload className="w-6 h-6 text-violet-600 mx-auto mb-1" />
                 <div className="text-[13px] font-bold text-txt-primary">Tap to upload</div>
-                <div className="text-[11px] text-txt-secondary mt-1">JPG / PNG photo of the letter, up to 4 MB</div>
+                <div className="text-[11px] text-txt-secondary mt-1">PDF or photo (JPG / PNG / WebP), up to 4 MB</div>
               </div>
-              <input type="file" accept={ACCEPT_IMAGE} className="hidden"
+              <input type="file" accept={ACCEPT_LETTER} className="hidden"
                 onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
             </label>
           )}
           {letterDataUrl && (
             <div className="rounded-xl border border-bdr-light bg-surface-page/40 p-3 flex gap-3">
-              <img src={letterDataUrl} alt="offer letter" className="w-20 h-24 object-cover rounded-md border border-bdr-light" />
+              <FilePreview url={letterDataUrl} alt="offer letter" size="md" />
               <div className="flex-1 text-[12px]">
                 {ocrBusy && <div className="inline-flex items-center gap-2 text-violet-700 font-medium"><Loader2 className="w-4 h-4 animate-spin" /> Reading the letter…</div>}
                 {!ocrBusy && ocr && (

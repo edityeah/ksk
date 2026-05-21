@@ -16,7 +16,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../api/client.js'
 import { useApp } from '../../context/AppContext.jsx'
 import VerificationBadge from './_VerificationBadge.jsx'
-import { readFileAsDataUrl, ACCEPT_IMAGE } from '../../utils/fileUpload.js'
+import { readFileAsDataUrl, ACCEPT_LETTER } from '../../utils/fileUpload.js'
+import FilePreview from '../../components/FilePreview.jsx'
 import {
   CheckCircle2, XCircle, Upload, Loader2, ShieldCheck, FileText,
   Image as ImageIcon, AlertTriangle, Calendar, IndianRupee, Building2,
@@ -341,13 +342,13 @@ function SlipUpload({ url, onPick, label }) {
   if (url) {
     return (
       <div className="rounded-xl border border-bdr-light bg-surface-page/40 p-2 flex items-center gap-2">
-        <img src={url} alt="slip" className="w-12 h-14 object-cover rounded border border-bdr-light" />
+        <FilePreview url={url} alt="slip" size="sm" />
         <div className="flex-1 text-[11px] text-emerald-700 font-bold inline-flex items-center gap-1">
           <CheckCircle2 className="w-3.5 h-3.5" /> Salary slip attached
         </div>
         <label className="text-[11px] text-violet-700 cursor-pointer inline-flex items-center gap-1">
           <RefreshCw className="w-3 h-3" /> Replace
-          <input type="file" accept={ACCEPT_IMAGE} className="hidden" onChange={e => e.target.files?.[0] && onPick(e.target.files[0])} />
+          <input type="file" accept={ACCEPT_LETTER} className="hidden" onChange={e => e.target.files?.[0] && onPick(e.target.files[0])} />
         </label>
       </div>
     )
@@ -359,7 +360,7 @@ function SlipUpload({ url, onPick, label }) {
         <div className="text-[12px] font-bold">{label}</div>
         <div className="text-[10px] text-txt-secondary">JPG / PNG photo of the slip</div>
       </div>
-      <input type="file" accept={ACCEPT_IMAGE} className="hidden" onChange={e => e.target.files?.[0] && onPick(e.target.files[0])} />
+      <input type="file" accept={ACCEPT_LETTER} className="hidden" onChange={e => e.target.files?.[0] && onPick(e.target.files[0])} />
     </label>
   )
 }
@@ -368,13 +369,13 @@ function EvidenceUpload({ url, onPick }) {
   if (url) {
     return (
       <div className="rounded-xl border border-bdr-light bg-surface-page/40 p-2 flex items-center gap-2">
-        <img src={url} alt="evidence" className="w-12 h-14 object-cover rounded border border-bdr-light" />
+        <FilePreview url={url} alt="evidence" size="sm" />
         <div className="flex-1 text-[11px] text-emerald-700 font-bold inline-flex items-center gap-1">
           <CheckCircle2 className="w-3.5 h-3.5" /> Evidence attached
         </div>
         <label className="text-[11px] text-violet-700 cursor-pointer inline-flex items-center gap-1">
           <RefreshCw className="w-3 h-3" /> Replace
-          <input type="file" accept={ACCEPT_IMAGE} className="hidden" onChange={e => e.target.files?.[0] && onPick(e.target.files[0])} />
+          <input type="file" accept={ACCEPT_LETTER} className="hidden" onChange={e => e.target.files?.[0] && onPick(e.target.files[0])} />
         </label>
       </div>
     )
@@ -386,7 +387,7 @@ function EvidenceUpload({ url, onPick }) {
         <div className="text-[12px] font-bold">Upload evidence</div>
         <div className="text-[10px] text-txt-secondary">Pay stub, ID card photo, or selfie at workplace</div>
       </div>
-      <input type="file" accept={ACCEPT_IMAGE} className="hidden" onChange={e => e.target.files?.[0] && onPick(e.target.files[0])} />
+      <input type="file" accept={ACCEPT_LETTER} className="hidden" onChange={e => e.target.files?.[0] && onPick(e.target.files[0])} />
     </label>
   )
 }

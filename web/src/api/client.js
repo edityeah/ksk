@@ -24,6 +24,11 @@ function invalidateSession() {
 }
 
 async function req(method, path, body) {
+  // Once one request 401s, short-circuit every subsequent call. Otherwise
+  // a Promise.all batch on canvas mount fires 5 parallel requests, all 5
+  // race the redirect, and the console fills with 401 noise that confuses
+  // people testing the build.
+  if (invalidating) throw new Error('session_invalidating')
   const headers = { 'content-type': 'application/json' }
   const tok = getToken()
   if (tok) headers.authorization = `Bearer ${tok}`

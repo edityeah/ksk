@@ -42,6 +42,24 @@ app.set('trust proxy', 1)
 app.use(express.json({ limit: '5mb' }))
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173', credentials: true }))
 
+// Dev-only request logger so we can see 401s / 4xx in the terminal while
+// smoke-testing the new flows. No-op in production.
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    const url = req.originalUrl || req.url
+    if (url === '/api/health') return next()
+    const t0 = Date.now()
+    const tokInfo = req.headers.authorization ? '+jwt' : 'no-jwt'
+    res.on('finish', () => {
+      const ms = Date.now() - t0
+      const code = res.statusCode
+      const mark = code >= 400 ? '⚠' : '·'
+      console.log(`${mark} ${code} ${req.method} ${url} ${tokInfo} ${ms}ms`)
+    })
+    next()
+  })
+}
+
 // Health check — defined BEFORE the rate-limit middleware so Render's internal
 // probes never get throttled. Returning fast keeps the service marked healthy.
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: Date.now() }))
