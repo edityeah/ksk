@@ -122,39 +122,103 @@ export function CallProvider({ children }) {
       startedAt: Date.now(),
     })
 
+    console.log('[anam:step] 1/5 startVideoCall fired', { persona, mediaElement: !!mediaElement })
     try {
       const session = await api.post('/api/avatar/session', { persona })
+      console.log('[anam:step] 2/5 /api/avatar/session response', {
+        hasToken: !!(session.sessionToken || session.session_token || session.token),
+        configured: session.configured,
+      })
       const sessionToken = session.sessionToken || session.session_token || session.token
       if (!sessionToken) throw new Error('No sessionToken from /api/avatar/session')
       const sdk = await loadAnam()
+      console.log('[anam:step] 3/5 SDK loaded', Object.keys(sdk).slice(0, 10))
       const createClient = sdk.createClient || sdk.default?.createClient
       if (typeof createClient !== 'function') throw new Error('Anam SDK missing createClient')
       const client = createClient(sessionToken)
+      console.log('[anam:step] 4/5 client created', { methods: Object.getOwnPropertyNames(Object.getPrototypeOf(client)).slice(0, 20) })
       anamRef.current = client
+
+      // Wire up all of Anam's lifecycle events so failures are visible in
+      // the console. Without these, a stale avatar id or quota error fails
+      // silently — the SDK just sits there in "connected" with no media.
+      // Verified event names against SDK 4.13.1. No CONNECTION_FAILURE event —
+      // failures surface as CONNECTION_CLOSED with a closeCode.
+      const ANAM_EVENTS = [
+        'CONNECTION_ESTABLISHED', 'CONNECTION_CLOSED',
+        'SESSION_READY', 'SERVER_WARNING',
+        'VIDEO_STREAM_STARTED', 'VIDEO_PLAY_STARTED',
+        'AUDIO_STREAM_STARTED', 'INPUT_AUDIO_STREAM_STARTED',
+        'MIC_PERMISSION_DENIED', 'MIC_PERMISSION_GRANTED',
+        'CLIENT_TOOL_EVENT_RECEIVED', 'WEB_SOCKET_OPEN',
+      ]
+      for (const ev of ANAM_EVENTS) {
+        try {
+          client.addListener?.(ev, (...args) => {
+            console.log('[anam:event]', ev, args?.[0] ?? '')
+            if (ev === 'CONNECTION_CLOSED') {
+              const code = args?.[0]?.code || args?.[0]
+              if (code && code !== 'CONNECTION_CLOSED_CODE_NORMAL') {
+                patchCall({ state: 'error', error: `Anam closed: ${code}` })
+              }
+            }
+          })
+        } catch {}
+      }
 
       // Persist user turns from Anam's history events (it transcribes via its own STT).
       const respondedTo = new Set()
       client.addListener?.('MESSAGE_HISTORY_UPDATED', async (history) => {
+        console.log('[anam:history] fired', {
+          length: Array.isArray(history) ? history.length : 'not-array',
+          lastRole: history?.[history?.length - 1]?.role,
+          lastContent: history?.[history?.length - 1]?.content?.slice(0, 60),
+        })
         if (!Array.isArray(history) || history.length === 0) return
         const last = history[history.length - 1]
         if (last?.role !== 'user') return
         const key = last.id || last.messageId || `${history.length}::${(last.content || '').slice(0, 80)}`
-        if (respondedTo.has(key)) return
+        if (respondedTo.has(key)) {
+          console.log('[anam:history] skip — already responded to', key)
+          return
+        }
         respondedTo.add(key)
         if (last.content) {
-          try { handlersRef.current.onUserTranscript?.(last.content) } catch {}
+          console.log('[anam:history] → onHistory for user turn', last.content.slice(0, 60))
+          // NOTE: do NOT call onUserTranscript here. In video mode, streamReply
+          // (invoked via onHistory below) already pushes the user message + a
+          // bot placeholder to the chat. Calling onUserTranscript too would
+          // double the user bubble for every video-mode turn.
           persistMessage('user', last.content)
-          try { await onHistory?.(history, client) } catch {}
+          try { await onHistory?.(history, client) } catch (e) {
+            console.error('[anam:history] onHistory threw', e?.message || e)
+          }
         }
       })
 
+      console.log('[anam:step] 5/5 about to streamToVideoElement', { hasMediaElement: !!mediaElement, mediaElementId: mediaElement?.id })
+      if (!mediaElement) {
+        console.warn('[anam] NO mediaElement passed to startVideoCall — the avatar will never render')
+      }
       if (mediaElement) {
         videoElementRef.current = mediaElement
         if (!mediaElement.id) mediaElement.id = `anam-media-${persona}`
-        await client.streamToVideoElement(mediaElement.id)
-        try { mediaElement.muted = false; mediaElement.volume = 1; await mediaElement.play() } catch {}
+        try {
+          // 4.13.1: streamToVideoAndAudioElements is deprecated and delegates
+          // to streamToVideoElement. Use streamToVideoElement directly with
+          // just the video element id; Anam binds audio onto the same element.
+          await client.streamToVideoElement(mediaElement.id)
+          console.log('[anam:step] streamToVideoElement resolved')
+        } catch (e) {
+          console.error('[anam] streamToVideoElement threw', e?.message || e, e)
+          throw e
+        }
+        try { mediaElement.muted = false; mediaElement.volume = 1; await mediaElement.play() } catch (e) {
+          console.warn('[anam] video element play() rejected', e?.message || e)
+        }
       }
       patchCall({ state: 'live' })
+      console.log('[anam:step] state → live')
     } catch (e) {
       console.error('[call] video start failed', e?.message || e)
       patchCall({ state: 'error', error: e?.message || String(e) })

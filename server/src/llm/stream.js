@@ -9,8 +9,14 @@ import { openai, CHAT_MODEL } from './openai.js'
 
 // Stream a chat turn. `onChunk(delta)` is called for every text fragment.
 // `onCitation(c)` (optional) for web_search citations as they appear.
-export async function streamChat({ system, messages, useWebSearch = false, onChunk, onCitation = () => {} }) {
+export async function streamChat({ system, messages, useWebSearch = false, fast = false, onChunk, onCitation = () => {} }) {
   if (!openai) throw new Error('OPENAI_API_KEY not configured')
+
+  // In `fast` mode (voice / video calls) use gpt-4o-mini — first-token latency
+  // is ~2x faster than gpt-4o on short replies, and the quality drop is
+  // imperceptible for the kind of conversational turns voice agents produce.
+  // Overridable via env if you need a different mini model.
+  const model = fast ? (process.env.OPENAI_FAST_MODEL || 'gpt-4o-mini') : CHAT_MODEL
 
   // ── Responses API path (with web search tool) ────────────────────────
   if (useWebSearch) {
@@ -21,7 +27,7 @@ export async function streamChat({ system, messages, useWebSearch = false, onChu
     }))
 
     const stream = await openai.responses.stream({
-      model: CHAT_MODEL,
+      model,
       instructions: system,
       input,
       tools: [{ type: 'web_search_preview' }],
@@ -42,11 +48,11 @@ export async function streamChat({ system, messages, useWebSearch = false, onChu
 
   // ── Standard chat-completions streaming ───────────────────────────────
   const stream = await openai.chat.completions.create({
-    model: CHAT_MODEL,
+    model,
     messages: [{ role: 'system', content: system }, ...messages],
     stream: true,
     temperature: 0.7,
-    max_tokens: 800,
+    max_tokens: fast ? 200 : 800,   // fast mode forces brevity at the API level
   })
   for await (const chunk of stream) {
     const delta = chunk.choices?.[0]?.delta?.content

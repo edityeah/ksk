@@ -121,12 +121,14 @@ export class RealtimeVoice {
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
 
-      const sdpRes = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
+      // GA Realtime API SDP exchange endpoint. Path moved from /v1/realtime
+      // to /v1/realtime/calls when the API went GA. The old path returns 400
+      // on a valid offer; only /calls accepts it.
+      const sdpRes = await fetch(`https://api.openai.com/v1/realtime/calls?model=${encodeURIComponent(model)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${clientSecret}`,
           'Content-Type': 'application/sdp',
-          'OpenAI-Beta': 'realtime=v1',
         },
         body: offer.sdp,
       })
@@ -146,8 +148,8 @@ export class RealtimeVoice {
 
   // Parse a server event off the data channel. We care about a small subset:
   //   conversation.item.input_audio_transcription.completed → user said X
-  //   response.audio_transcript.delta                      → assistant text (live)
-  //   response.audio_transcript.done                       → assistant turn done
+  //   response.output_audio_transcript.delta (GA) / response.audio_transcript.delta (beta) → assistant text (live)
+  //   response.output_audio_transcript.done  (GA) / response.audio_transcript.done  (beta) → assistant turn done
   //   error                                                → surface to caller
   _handleEvent(raw) {
     let e
@@ -158,6 +160,8 @@ export class RealtimeVoice {
         if (t) this.onUserTranscript?.(t)
         break
       }
+      // GA event names use the `output_` prefix; beta names kept as fallback.
+      case 'response.output_audio_transcript.delta':
       case 'response.audio_transcript.delta': {
         const d = e.delta || ''
         if (!d) break
@@ -165,6 +169,7 @@ export class RealtimeVoice {
         this.onAssistantDelta?.(d)
         break
       }
+      case 'response.output_audio_transcript.done':
       case 'response.audio_transcript.done':
       case 'response.done': {
         const full = (e.transcript || this.assistantBuffer || '').trim()

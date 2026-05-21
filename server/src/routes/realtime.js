@@ -30,7 +30,10 @@ r.use(rateLimit({
   legacyHeaders: false,
 }))
 
-const MODEL  = process.env.OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview-2024-12-17'
+// Updated for OpenAI Realtime GA (Aug 2025). The previous beta API was
+// retired; OpenAI now responds 400 to any call that sends OpenAI-Beta:
+// realtime=v1. Defaults updated to the GA model name. Override via env.
+const MODEL  = process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime'
 // `verse` and `ballad` are the warmest Indian-English-friendly OpenAI voices.
 const VOICE  = process.env.OPENAI_REALTIME_VOICE || 'verse'
 
@@ -67,16 +70,18 @@ const KB_DIRECTIVE =
   "- NSDC / MSDE official portals — for schemes (PMKVY, DDU-GKY, NAPS, SIB, PM Vishwakarma) and current eligibility / stipend rules.\n" +
   "When details aren't already in this conversation, use web search to pull from these sources rather than relying on memory."
 
-// Hard language constraint applied to every persona. Without this, the model
-// drifts to Devanagari / Urdu / other scripts when the user code-switches to
-// Hindi. The user wants strict Hinglish/English only — both for what they
-// read (assistant transcript) and what's shown back from their own speech.
+// Language behaviour: mirror the user's language. If they speak English,
+// reply in English. If they speak Hindi, reply in Hindi (Devanagari script
+// is fine). Same for Marathi, Gujarati, Bengali, Tamil, Telugu, Kannada,
+// Malayalam, Punjabi, Odia, Assamese, Urdu — match whichever they used.
+// Don't switch mid-conversation unless they switch first.
 const LANGUAGE_RULE =
-  "LANGUAGE RULES (strict, non-negotiable):\n" +
-  "- Reply ONLY in English or Hinglish (Hindi words written in Latin / Roman script, like 'aap kaise ho').\n" +
-  "- NEVER use Devanagari, Urdu, Arabic, Tamil, Bengali or any other non-Latin script — not even for a single word.\n" +
-  "- If the user speaks Hindi to you, reply in Hinglish (Latin script). If they speak English, reply in English. Mirror their register.\n" +
-  "- Numbers, names and place names always in Latin script."
+  "LANGUAGE RULES:\n" +
+  "- Detect the language the user spoke in this turn and reply in the SAME language.\n" +
+  "- English → English. Hindi → Hindi (Devanagari is fine). Marathi → Marathi. Gujarati → Gujarati. Bengali → Bengali. Tamil → Tamil. Telugu → Telugu. Kannada → Kannada. Malayalam → Malayalam. Punjabi → Punjabi (Gurmukhi). Odia → Odia. Assamese → Assamese. Urdu → Urdu.\n" +
+  "- If the user mixes English + an Indian language in one sentence (code-switching), reply in the same mixed style.\n" +
+  "- Do NOT pre-emptively switch languages. Wait for the user to switch first.\n" +
+  "- Scheme names, employer names, place names, NSQF codes and numbers can stay in their original form (English/Latin script) inside a non-English reply — that's natural Indian usage."
 
 const BodySchema = z.object({
   persona: z.string().optional(),
@@ -104,50 +109,59 @@ r.post('/session', async (req, res, next) => {
     if (body.extraSystem) parts.push(body.extraSystem)
     const instructions = parts.join('\n\n')
 
-    const payload = {
+    const voice = body.voice || VOICE
+    // GA Realtime API payload — session is wrapped under a `session` envelope
+    // and the field set differs from the old beta. Audio block carries voice
+    // + transcription + turn detection; modalities live at session level via
+    // the `output_modalities` array.
+    const sessionConfig = {
+      type: 'realtime',
       model: MODEL,
-      voice: body.voice || VOICE,
-      modalities: ['audio', 'text'],
       instructions,
-      // Server-side voice activity detection — OpenAI handles turn-taking,
-      // including barge-in, natively. Tunables kept reasonable for Indian-
-      // English speakers (a bit more patience than the defaults).
-      turn_detection: {
-        type: 'server_vad',
-        threshold: 0.5,
-        prefix_padding_ms: 300,
-        silence_duration_ms: 700,
-        create_response: true,
-        interrupt_response: true,
+      output_modalities: ['audio'],
+      audio: {
+        input: {
+          // Whisper for live transcription with auto language detection so
+          // we capture Hindi, Marathi, Gujarati, Tamil, Bengali etc. in
+          // their native scripts instead of forcing Latin transliteration.
+          transcription: { model: 'whisper-1' },
+          // Server VAD for natural turn-taking + barge-in (interrupts the
+          // model's response when the user starts speaking again).
+          turn_detection: {
+            type: 'server_vad',
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 700,
+            create_response: true,
+            interrupt_response: true,
+          },
+        },
+        output: { voice },
       },
-      // Pin transcription to English. This forces Whisper to write everything
-      // in Latin script — so when the user speaks Hindi, we get Hinglish on
-      // screen instead of Whisper guessing Urdu / Arabic from the phonetics.
-      input_audio_transcription: { model: 'whisper-1', language: 'en' },
     }
 
-    const r2 = await fetch('https://api.openai.com/v1/realtime/sessions', {
+    // GA endpoint: /v1/realtime/client_secrets mints a short-lived client
+    // secret. The old /v1/realtime/sessions path was retired in Aug 2025 —
+    // calling it now returns "The Realtime Beta API is no longer supported."
+    const r2 = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
-        'OpenAI-Beta': 'realtime=v1',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ session: sessionConfig }),
     })
     if (!r2.ok) {
       const txt = await r2.text().catch(() => '')
       console.error('[realtime] session mint failed', r2.status, txt.slice(0, 400))
       return res.status(502).json({ error: 'realtime_mint_failed', detail: txt.slice(0, 200) })
     }
-    const session = await r2.json()
-    // Return the bits the browser needs: ephemeral key + model name.
-    res.json({
-      clientSecret: session.client_secret?.value,
-      expiresAt: session.client_secret?.expires_at,
-      model: MODEL,
-      voice: payload.voice,
-    })
+    const minted = await r2.json()
+    // GA response shape: { value, expires_at, session }. Old beta nested it
+    // under `client_secret.value`. Handle both for forward-compat.
+    const clientSecret = minted.value || minted.client_secret?.value
+    const expiresAt    = minted.expires_at || minted.client_secret?.expires_at
+    res.json({ clientSecret, expiresAt, model: MODEL, voice })
   } catch (e) {
     console.error('[realtime] error', e?.message || e)
     next(e)

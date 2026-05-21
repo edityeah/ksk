@@ -233,6 +233,7 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
   }
 
   async function streamReply(userText, anamClient = null) {
+    console.log('[reply] streamReply called', { text: userText.slice(0, 60), hasAnamClient: !!anamClient })
     setThinking(true)
     setMessages(m => [...m, { role: 'user', text: userText }])
     const allMessages = [...messagesRef.current, { role: 'user', text: userText }]
@@ -241,16 +242,24 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
     const body = {
       persona,
       messages: allMessages.map(m => ({ role: m.role === 'bot' ? 'assistant' : m.role, content: m.text || '' })),
-      // Voice mode: skip web search to cut 3-5 s of latency. Text/video modes
-      // keep it enabled (Career Counsellor needs fresh scheme/job lookups).
-      useWebSearch: callMode === 'voice' ? false : !!useWebSearch,
+      // Voice + video both skip web search to keep first-token latency under
+      // Anam's 500 ms "pipeline stalled" threshold. Text-only mode keeps it
+      // enabled (Career Counsellor needs fresh scheme/job lookups).
+      useWebSearch: (callMode === 'voice' || callMode === 'video') ? false : !!useWebSearch,
+      // `fast` flag tells the server to: use gpt-4o-mini, skip Zep awaits,
+      // skip the CARD_TOOLBOX prompt block, and add a "≤2 sentences" hint.
+      // Cuts first-token latency by ~500-800 ms vs the default path.
+      fast: (callMode === 'voice' || callMode === 'video'),
       extraSystem: effectiveSystem || undefined,
       role: role || undefined,                  // role-aware persona context
     }
-    let talkStream = null
-    if (anamClient && typeof anamClient.createTalkMessageStream === 'function') {
-      try { talkStream = anamClient.createTalkMessageStream() } catch (e) { console.warn('[anam] createTalkMessageStream failed', e) }
-    }
+    // Anam SDK 4.13.1: don't use createTalkMessageStream/streamMessageChunk
+    // for multi-turn. The SDK has a 500 ms "pipeline stalled" watchdog that
+    // fires between chunks and closes the connection (CONNECTION_CLOSED_NORMAL)
+    // as soon as the first endMessage() runs. Using client.talk(fullText)
+    // with a single buffered string avoids the watchdog entirely — Anam
+    // takes the whole reply, lip-syncs it, and the session stays open for
+    // the next user turn.
     let buffer = ''
     const citations = []
     let placeholderIndex = -1
@@ -259,12 +268,14 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
     const ctrl = new AbortController()
     streamAbortRef.current = ctrl
     try {
+      console.log('[reply] fetching /api/ai/stream …')
       const res = await fetch('/api/ai/stream', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'authorization': `Bearer ${token}` },
         body: JSON.stringify(body),
         signal: ctrl.signal,
       })
+      console.log('[reply] fetch resolved', { status: res.status, hasBody: !!res.body })
       if (!res.ok || !res.body) throw new Error(`stream HTTP ${res.status}`)
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -288,7 +299,7 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
             // the bubble. Trim leading / trailing whitespace too.
             const cleaned = buffer.replace(/[ \t]*\n[ \t]*\n[ \t\n]+/g, '\n\n').replace(/^\s+|\s+$/g, '')
             setMessages(m => { const c = m.slice(); if (idx >= 0 && c[idx]) c[idx] = { ...c[idx], text: cleaned }; return c })
-            try { talkStream?.streamMessageChunk(p.delta) } catch {}
+            /* Anam audio is sent once at p.done — see comment above. */
           }
           if (p.citation?.url) citations.push(p.citation)
           // Card events from the server's card parser — append to the
@@ -306,11 +317,26 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
             })
           }
           if (p.done) {
+            console.log('[reply] done', { bufferLen: buffer.length, hasAnamClient: !!anamClient })
             if (citations.length) {
               const idx = placeholderIndex
               setMessages(m => { const c = m.slice(); if (idx >= 0) c[idx] = { ...c[idx], citations }; return c })
             }
-            try { talkStream?.endMessage?.() } catch {}
+            // Strip card fences before sending to Anam — those are JSON
+            // payloads meant for the chat renderer, not for the avatar to
+            // narrate. Whatever's left is the conversational text.
+            const speakText = buffer
+              .replace(/<<<KSKCARD>>>[\s\S]*?<<<END>>>/g, '')
+              .replace(/\s+/g, ' ')
+              .trim()
+            if (anamClient && typeof anamClient.talk === 'function' && speakText) {
+              try {
+                await anamClient.talk(speakText)
+                console.log('[reply] anam.talk dispatched', { len: speakText.length })
+              } catch (e) {
+                console.warn('[reply] anam.talk threw', e?.message || e)
+              }
+            }
             // Persist the final assistant text once the stream is complete.
             if (buffer.trim()) persistMessage('bot', buffer)
           }
@@ -447,12 +473,23 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
           • voice call → big pulsing orb in the middle, name + status, no chat
             visible below (call mode owns the whole canvas like a phone call)
           • video call → contained 220px video band with caption, chat below */}
+      {/* Always-mounted video element. Anam needs `mediaRef.current` to be
+          a real DOM node at click time — the SDK won't start its session
+          until streamToVideoElement is called against a live element. If we
+          only mounted it inside the callMode==='video' branch, the ref
+          would still be null when startVideoCall fires, so the avatar
+          never renders. Visibility is controlled by callMode below. */}
+      <video
+        ref={mediaRef}
+        id={`anam-media-${persona}`}
+        playsInline
+        autoPlay
+        className={callMode === 'video' && showRibbon
+          ? 'rounded-2xl bg-slate-900 w-auto h-[180px] md:h-[220px] aspect-video object-cover shadow-card mx-auto block'
+          : 'hidden'}
+      />
       {showRibbon && callMode === 'voice' && (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-gradient-to-b from-primary-light/60 to-white px-6 py-10">
-          {/* Hidden but mounted — Anam audio plays through this. Voice-only
-              mode (Realtime API) doesn't actually use it, but we keep it for
-              the Anam fallback path. */}
-          <video ref={mediaRef} id={`anam-media-${persona}`} playsInline autoPlay className="hidden" />
 
           {/* Pulsing orb — animated rings around a solid centre. */}
           <div className="relative w-48 h-48 flex items-center justify-center">
@@ -480,13 +517,9 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
       {showRibbon && callMode === 'video' && (
         <div className="flex-shrink-0 bg-gradient-to-b from-primary-light/50 to-white border-b border-bdr">
           <div className="px-4 py-3 flex flex-col items-center gap-2">
-            <video
-              ref={mediaRef}
-              id={`anam-media-${persona}`}
-              playsInline
-              autoPlay
-              className="rounded-2xl bg-slate-900 w-auto h-[180px] md:h-[220px] aspect-video object-cover shadow-card"
-            />
+            {/* The actual <video> element is rendered at the top of the
+                component so its ref is always populated; this block only
+                holds the caption + status below it. */}
             <div className="flex items-center gap-2 text-[12px] font-bold text-txt-primary">
               {callState === 'connecting' ? 'Connecting…' : `On a video call with ${personaShort}`}
               {listening && callState === 'live' && (
@@ -520,7 +553,7 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {quickAsks.map((q, i) => (
-                <button key={i} onClick={() => streamReply(q, anamRef.current)}
+                <button key={i} onClick={() => streamReply(q, null)}
                   className="text-left text-[12px] px-3 py-2 rounded-xl border border-bdr-light bg-white hover:border-primary hover:bg-primary-light/40 transition leading-snug">
                   {q}
                 </button>
@@ -533,7 +566,7 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
             <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary mb-2">Try asking</div>
             <div className="flex flex-wrap gap-2">
               {suggestions.map((s, i) => (
-                <button key={i} onClick={() => streamReply(s, anamRef.current)}
+                <button key={i} onClick={() => streamReply(s, null)}
                   className="text-left text-[12px] px-3 py-2 rounded-2xl border border-bdr bg-white hover:border-primary">
                   {s}
                 </button>
@@ -548,7 +581,7 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
           <div key={i}>
             <ChatBubble role={m.role} text={m.text} />
             {Array.isArray(m.cards) && m.cards.map((card, j) => (
-              <CardRenderer key={j} card={card} onChip={(text) => streamReply(text, anamRef.current)} />
+              <CardRenderer key={j} card={card} onChip={(text) => streamReply(text, null)} />
             ))}
             {m.citations?.length > 0 && (
               <div className="text-[10px] text-txt-tertiary mt-1 ml-2 flex flex-wrap gap-x-3">

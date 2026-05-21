@@ -104,30 +104,38 @@ r.post('/stream', async (req, res, next) => {
       extraSystem: z.string().optional(),
       useWebSearch: z.boolean().optional(),
       role: z.string().optional(),     // drives role-aware persona context
+      fast: z.boolean().optional(),    // voice/video mode → mini model, no Zep awaits, no cards
     }).parse(req.body)
 
     const persona = getPersona(body.persona)
     const useWebSearch = body.useWebSearch ?? !!persona.useWebSearch
+    const fast = !!body.fast
 
-    // Zep memory — best-effort. We DO await ensureThread + getContext so we
-    // can inject the rolling memory into the system prompt, BUT both fail
-    // silently and disable Zep for the rest of the process on quota errors
-    // so they never block the response path.
-    const threadId = await ensureThread(req.user.id, body.persona, { firstName: req.user.name?.split(' ')[0] }).catch(() => null)
-    const memCtx = threadId ? (await getContext(threadId).catch(() => '')) : ''
+    // Zep memory — best-effort. In normal mode we await ensureThread + getContext
+    // so we can inject the rolling memory into the system prompt. In `fast` mode
+    // (voice / video calls) we skip both awaits — saves 200-500 ms of first-token
+    // latency. Background addMessage still runs below so the convo is logged.
+    const threadId = fast
+      ? null
+      : await ensureThread(req.user.id, body.persona, { firstName: req.user.name?.split(' ')[0] }).catch(() => null)
+    const memCtx = (!fast && threadId) ? (await getContext(threadId).catch(() => '')) : ''
 
     let system = persona.systemPrompt
+    // In fast mode add a tight reply-length directive — keeps Anam lip-sync
+    // tolerable and shaves OpenAI generation time.
+    if (fast) {
+      system += '\n\nVOICE/VIDEO MODE: Reply in ≤2 short sentences. No bullet lists, no headers, no markdown. Plain conversational English (or whichever language the user spoke).'
+    }
     // Role context: when Saathi (general persona) is talking to a non-trainee
     // role, append role-specific framing + a heavy data pack (e.g. NSDC Academy
     // numbers for nsdc_officer) so the agent answers like an analyst with real
     // figures and emits chart cards.
     const roleAddendum = buildRoleContext({ persona: body.persona, role: body.role })
     if (roleAddendum) system += '\n\n' + roleAddendum
-    // Card toolbox — tells the LLM *when* and *how* to emit
-    // <<<KSKCARD>>>...<<<END>>> fences. Now includes the 6 analyst chart cards
-    // (kpi_grid, bar_chart, donut_chart, line_chart, data_table, action_panel)
-    // alongside the 15 learner cards.
-    system += '\n\n' + CARD_TOOLBOX
+    // Card toolbox — tells the LLM when/how to emit <<<KSKCARD>>>...<<<END>>>
+    // fences. Skipped in fast mode (cards bloat the system prompt by ~3KB and
+    // the agent is speaking, not drawing UI).
+    if (!fast) system += '\n\n' + CARD_TOOLBOX
     if (body.extraSystem) system += '\n\nAdditional context:\n' + body.extraSystem
     if (memCtx)           system += '\n\nWhat you remember about this user:\n' + memCtx
 
@@ -165,6 +173,7 @@ r.post('/stream', async (req, res, next) => {
         system,
         messages: body.messages.filter(m => m.role !== 'system'),
         useWebSearch,
+        fast,
         onChunk: (delta) => { cardParser.feed(delta) },
         onCitation: (c) => {
           if (c.url) {
