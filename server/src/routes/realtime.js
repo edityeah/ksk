@@ -32,8 +32,24 @@ r.use(rateLimit({
 
 // Updated for OpenAI Realtime GA (Aug 2025). The previous beta API was
 // retired; OpenAI now responds 400 to any call that sends OpenAI-Beta:
-// realtime=v1. Defaults updated to the GA model name. Override via env.
-const MODEL  = process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime'
+// realtime=v1. Defaults updated to the GA model name.
+//
+// Legacy env values like `gpt-4o-realtime-preview-2024-12-17` were valid
+// against the old beta endpoint but the GA WebRTC `/v1/realtime/calls`
+// path requires the GA model name. Silently upgrade those so a stale
+// Render env doesn't break the SDP handshake. Set a non-legacy override
+// via env to opt out (e.g. a future dated GA snapshot).
+const LEGACY_REALTIME_MODELS = new Set([
+  'gpt-4o-realtime-preview',
+  'gpt-4o-realtime-preview-2024-12-17',
+  'gpt-4o-realtime-preview-2024-10-01',
+  'gpt-4o-mini-realtime-preview',
+  'gpt-4o-mini-realtime-preview-2024-12-17',
+])
+const ENV_MODEL = process.env.OPENAI_REALTIME_MODEL
+const MODEL = (ENV_MODEL && !LEGACY_REALTIME_MODELS.has(ENV_MODEL))
+  ? ENV_MODEL
+  : 'gpt-realtime'
 // `verse` and `ballad` are the warmest Indian-English-friendly OpenAI voices.
 const VOICE  = process.env.OPENAI_REALTIME_VOICE || 'verse'
 
