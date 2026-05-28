@@ -40,6 +40,11 @@ import TpSchemesCanvas from './TpSchemesCanvas.jsx'
 // Secure-Demand canvases (TP + TC views)
 import TpDemandMasterCanvas from './TpDemandMasterCanvas.jsx'
 import TcDemandBoardCanvas from './TcDemandBoardCanvas.jsx'
+// Mentors + community posts
+import MentorDirectoryCanvas from './MentorDirectoryCanvas.jsx'
+import MentorProfileCanvas from './MentorProfileCanvas.jsx'
+import PostsFeedCanvas from './PostsFeedCanvas.jsx'
+import PostDetailCanvas from './PostDetailCanvas.jsx'
 import GenericCanvas from './GenericCanvas.jsx'
 
 export const CANVAS_MODULES = {
@@ -89,6 +94,12 @@ export const CANVAS_MODULES = {
   // Secure Demand
   tp_demand_master:     TpDemandMasterCanvas,
   tc_demand_board:      TcDemandBoardCanvas,
+
+  // Mentors + community posts
+  mentor_directory:     MentorDirectoryCanvas,
+  mentor_profile:       MentorProfileCanvas,
+  posts_feed:           PostsFeedCanvas,
+  post_detail:          PostDetailCanvas,
 
   // Generic placeholder for any type not yet built — renders a clean "coming next" page
   // Used for: career_counsellor, learning_assistant, oral_assessment, ocr_exam, mock_interview,
@@ -146,6 +157,12 @@ const META = {
   // Secure-Demand tile metadata
   tp_demand_master:     { title: 'Demand Master',        subtitle: 'National MoUs · slot allocation · skill demand sheet', icon: '🤝' },
   tc_demand_board:      { title: 'Demand Board',         subtitle: 'Confirm slots with local branches',          icon: '🤝' },
+
+  // Mentors + community posts
+  mentor_directory:     { title: 'Industry Mentors',     subtitle: 'Subscribe + book 1:1 slots with practitioners', icon: '🧑‍🏫' },
+  mentor_profile:       { title: 'Mentor profile',       subtitle: 'Bio · subscribers · recent posts',              icon: '🧑‍🏫' },
+  posts_feed:           { title: 'Community Posts',      subtitle: 'Updates from learners, centres, partners, mentors', icon: '📝' },
+  post_detail:          { title: 'Post',                 subtitle: 'Full post view',                                icon: '📝' },
 }
 
 export function getCanvasMeta(type) {

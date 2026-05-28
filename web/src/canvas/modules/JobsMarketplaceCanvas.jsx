@@ -47,6 +47,8 @@ export default function JobsMarketplaceCanvas() {
   const [aiAnswer, setAiAnswer] = useState('')
   const [aiCitations, setAiCitations] = useState([])
   const [partnerJobs, setPartnerJobs] = useState([])
+  const [partnerLoading, setPartnerLoading] = useState(true)
+  const [partnerError, setPartnerError] = useState('')
   const firedOnce = useRef(false)
 
   async function askAi(query) {
@@ -69,13 +71,27 @@ export default function JobsMarketplaceCanvas() {
     } finally { setAiBusy(false) }
   }
 
-  // Fire one default search on mount so the trainee lands on results, not an
-  // empty page. Also load partner-side seeded jobs as a small fallback strip.
+  // Load the partner-side seeded jobs immediately — that's the default
+  // listing the trainee should see when the canvas opens. The AI live
+  // search is OPT-IN: the user has to type / tweak the query and hit the
+  // "Search live" button. We were auto-firing the AI on every open before,
+  // which (a) made the page feel like an agent rather than a listing and
+  // (b) burned tokens on every open.
   useEffect(() => {
     if (firedOnce.current) return
     firedOnce.current = true
-    askAi(aiQuery)
-    api.get('/api/jobs').then(r => setPartnerJobs(r.jobs || [])).catch(() => {})
+    setPartnerLoading(true); setPartnerError('')
+    api.get('/api/jobs')
+      .then(r => {
+        const jobs = Array.isArray(r?.jobs) ? r.jobs : []
+        console.log('[jobs] fetched', jobs.length, 'partner openings')
+        setPartnerJobs(jobs)
+      })
+      .catch(e => {
+        console.warn('[jobs] fetch failed', e?.status, e?.message, e?.payload)
+        setPartnerError(e?.message || 'fetch_failed')
+      })
+      .finally(() => setPartnerLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -113,20 +129,54 @@ export default function JobsMarketplaceCanvas() {
         </div>
       </div>
 
-      {/* AI result panel — primary surface */}
-      <div className="px-5 py-3 flex-1 min-h-0">
+      <div className="px-5 py-3 flex-1 min-h-0 space-y-5">
+        {/* Primary listing: KSK partner openings + any seeded jobs */}
+        {partnerLoading ? (
+          <div className="rounded-2xl border border-dashed border-bdr-light bg-surface-page/30 p-6 text-center">
+            <Loader2 className="w-5 h-5 animate-spin text-teal-600 mx-auto" />
+            <div className="text-[13px] text-txt-secondary mt-2">Loading verified openings…</div>
+          </div>
+        ) : partnerError ? (
+          <div className="rounded-2xl border border-dashed border-rose-200 bg-rose-50/40 p-6 text-center">
+            <Briefcase className="w-5 h-5 text-rose-500 mx-auto" />
+            <div className="text-[13px] text-rose-700 mt-2">
+              Couldn't load openings: <span className="font-mono text-[11px]">{partnerError}</span>
+            </div>
+          </div>
+        ) : partnerJobs.length > 0 ? (
+          <div>
+            <div className="text-[11px] uppercase tracking-wider font-bold text-txt-secondary mb-2">
+              Openings near you ({partnerJobs.length})
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {partnerJobs.map(j => <JobCard key={j.id} job={j} />)}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-bdr-light bg-surface-page/30 p-6 text-center">
+            <Briefcase className="w-5 h-5 text-txt-tertiary mx-auto" />
+            <div className="text-[13px] text-txt-secondary mt-2">
+              No partner openings listed yet for your profile. Use the live search above to pull from NCS / NSDC / employer portals.
+            </div>
+          </div>
+        )}
+
+        {/* AI live-search result panel — only renders when the user has
+            actively triggered the agent. No more auto-fire on mount. */}
         {aiBusy && (
-          <div className="rounded-2xl border border-dashed border-bdr-light bg-surface-page/40 p-6 text-center">
+          <div className="rounded-2xl border border-dashed border-teal-300 bg-teal-50/40 p-6 text-center">
             <Loader2 className="w-5 h-5 animate-spin text-teal-600 mx-auto" />
             <div className="text-[13px] text-txt-secondary mt-2">
-              Looking up live jobs matching your Skill Passport…
+              Searching live across NCS, NSDC and employer portals…
             </div>
           </div>
         )}
         {!aiBusy && aiAnswer && (
-          <div className="rounded-2xl bg-white border border-bdr-light p-4 shadow-card">
+          <div className="rounded-2xl bg-white border border-teal-200 p-4 shadow-card">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-[11px] uppercase tracking-wider font-bold text-teal-700">Live openings</div>
+              <div className="text-[11px] uppercase tracking-wider font-bold text-teal-700 inline-flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Live search results
+              </div>
               <button onClick={() => askAi(aiQuery)} className="text-[11px] text-primary hover:underline inline-flex items-center gap-1">
                 <RefreshCw className="w-3 h-3" /> Refresh
               </button>
@@ -141,16 +191,6 @@ export default function JobsMarketplaceCanvas() {
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Partner openings strip — small, secondary */}
-        {partnerJobs.length > 0 && (
-          <div className="mt-5">
-            <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary mb-2">KSK partner employers</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {partnerJobs.map(j => <JobCard key={j.id} job={j} />)}
-            </div>
           </div>
         )}
       </div>

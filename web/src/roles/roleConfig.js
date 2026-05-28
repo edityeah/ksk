@@ -6,6 +6,7 @@ export const ROLE_LABELS = {
   trainer:           'Trainer',
   training_centre:   'Training Centre',
   training_partner:  'Training Partner',
+  mentor:            'Industry Mentor',
   assessor:          'Assessor',
   ssc:               'Sector Skills Council',
   employer:          'Employer',
@@ -19,6 +20,7 @@ export const ROLE_SCOPES = {
   trainer:           'Own batch',
   training_centre:   'Centre',
   training_partner:  'Multi-centre',
+  mentor:            'Own profile + posts',
   assessor:          'Sector / Job role',
   ssc:               'Sector (accreditation)',
   employer:          'Own hires',
@@ -33,6 +35,7 @@ export const ROLE_HOME_LAYOUT = {
   trainee:           'mobile',
   trainer:           'mobile',
   employer:          'mobile',
+  mentor:            'mobile',
   training_centre:   'desktop',
   training_partner:  'desktop',
   assessor:          'desktop',
@@ -60,15 +63,20 @@ export const ROLE_BOTS = {
     { id: 'payslip',         name: 'Upload Payslip',    desc: 'OCR-verified salary slips → DigiLocker',                icon: '🧾', tone: 'lime',    canvas: 'salary_slip',       section: 'employment' },
     { id: 'grievance',       name: 'Grievance',         desc: 'File and track grievances with NSDC',                   icon: '🆘', tone: 'rose',    canvas: 'grievance',         section: 'employment' },
 
-    // ── Section 3: Other Services (discovery + AI tutoring + jobs)
-    { id: 'discover',        name: 'Discover Courses',  desc: 'Browse skilling courses, ITIs and Skill Centres',       icon: '🧭', tone: 'indigo',  canvas: 'course_discovery',  section: 'other' },
-    { id: 'career',          name: 'Career Counsellor', desc: 'AI guidance on roles, salary ranges and pathways',      icon: '🎯', tone: 'fuchsia', canvas: 'career_counsellor', section: 'other' },
-    { id: 'learn',           name: 'Learning Assistant',desc: 'AI tutor for course prep and revision',                 icon: '📚', tone: 'emerald', canvas: 'learning_assistant',section: 'other' },
-    { id: 'mock_interview',  name: 'Mock Interview',    desc: 'Practice interviews + HR simulations',                  icon: '🎤', tone: 'rose',    canvas: 'mock_interview',    section: 'other' },
-    { id: 'oral',            name: 'Oral Assessment',   desc: 'Voice-based competency assessment',                     icon: '🗣️', tone: 'orange',  canvas: 'oral_assessment',   section: 'other' },
-    { id: 'jobs',            name: 'Find Jobs',         desc: 'Verified jobs near you, apply with Skill Passport',     icon: '💼', tone: 'teal',    canvas: 'jobs_marketplace',  section: 'other' },
-    { id: 'stipend',         name: 'Stipend Status',    desc: 'NAPS / DBT stipend disbursals + UTR',                   icon: '💸', tone: 'pink',    canvas: 'stipend_status',    section: 'other' },
-    { id: 'updates',         name: 'Updates & Alerts',  desc: 'Scheme announcements, deadlines, reminders',            icon: '🔔', tone: 'indigo',  canvas: 'notifications',     section: 'other' },
+    // ── Section 3: AI For All (AI tutoring + discovery + alerts)
+    // Sub-grouped via the `subsection` field rendered by SectionedAppGrid.
+    { id: 'career',          name: 'Career Counsellor', desc: 'AI guidance on roles, salary ranges and pathways',      icon: '🎯', tone: 'fuchsia', canvas: 'career_counsellor', section: 'other', subsection: 'coaches' },
+    { id: 'learn',           name: 'Learning Assistant',desc: 'AI tutor for course prep and revision',                 icon: '📚', tone: 'emerald', canvas: 'learning_assistant',section: 'other', subsection: 'coaches' },
+    { id: 'mock_interview',  name: 'Mock Interview',    desc: 'Practice interviews + HR simulations',                  icon: '🎤', tone: 'rose',    canvas: 'mock_interview',    section: 'other', subsection: 'coaches' },
+    { id: 'oral',            name: 'Oral Assessment',   desc: 'Voice-based competency assessment',                     icon: '🗣️', tone: 'orange',  canvas: 'oral_assessment',   section: 'other', subsection: 'coaches' },
+
+    { id: 'discover',        name: 'Discover Courses',  desc: 'Browse skilling courses, ITIs and Skill Centres',       icon: '🧭', tone: 'indigo',  canvas: 'course_discovery',  section: 'other', subsection: 'discover' },
+    { id: 'jobs',            name: 'Find Jobs',         desc: 'Verified jobs near you, apply with Skill Passport',     icon: '💼', tone: 'teal',    canvas: 'jobs_marketplace',  section: 'other', subsection: 'discover' },
+    { id: 'mentors',         name: 'Industry Mentors',  desc: 'Connect with practitioners in your sector',             icon: '🧑‍🏫',tone: 'violet',  canvas: 'mentor_directory',  section: 'other', subsection: 'discover' },
+    { id: 'posts',           name: 'Community Posts',   desc: 'Updates from learners, centres, partners + mentors',    icon: '📝', tone: 'sky',     canvas: 'posts_feed',        section: 'other', subsection: 'discover' },
+
+    { id: 'stipend',         name: 'Stipend Status',    desc: 'NAPS / DBT stipend disbursals + UTR',                   icon: '💸', tone: 'pink',    canvas: 'stipend_status',    section: 'employment' },
+    { id: 'updates',         name: 'Updates & Alerts',  desc: 'Scheme announcements, deadlines, reminders',            icon: '🔔', tone: 'indigo',  canvas: 'notifications',     section: 'employment' },
   ],
   trainer: [
     { id: 'attendance', name: 'Mark Attendance',    desc: 'Today\'s batch attendance with maker-checker',        icon: '🗓️', tone: 'amber',   canvas: 'attendance' },
@@ -170,6 +178,13 @@ export const ROLE_BOTS = {
     { id: 'reports',   name: 'Disbursal Reports',    desc: 'Monthly disbursal summaries by scheme',              icon: '📄', tone: 'amber',   canvas: 'stipend_queue' },
     { id: 'updates',   name: 'Updates & Alerts',     desc: 'PFMS notices, scheme guideline changes',             icon: '🔔', tone: 'pink',    canvas: 'notifications' },
   ],
+  // Industry Mentor — lives under the Partners umbrella in the role switcher,
+  // but has its own surface: own profile, post composer, subscribers + posts.
+  mentor: [
+    { id: 'profile',    name: 'My Mentor Profile',    desc: 'Edit your bio, rate, availability + see subscribers', icon: '🧑‍🏫', tone: 'violet',  canvas: 'mentor_profile' },
+    { id: 'posts',      name: 'Community Posts',      desc: 'Share tips + answers with the community',             icon: '📝',  tone: 'sky',     canvas: 'posts_feed' },
+    { id: 'updates',    name: 'Updates & Alerts',     desc: 'Subscriber milestones + scheme broadcasts',           icon: '🔔',  tone: 'pink',    canvas: 'notifications' },
+  ],
 }
 
 export const ROLE_SUGGESTIONS = {
@@ -230,10 +245,15 @@ export const ROLE_SUGGESTIONS = {
     'Retry Aadhaar-bank failures',
     'UTR confirmations summary',
   ],
+  mentor: [
+    'Who recently subscribed to me',
+    'Draft a post about retail floor career growth',
+    'How many slot requests this week',
+  ],
 }
 
 export const ROLE_CANVASES = {
-  trainee: ['skill_passport', 'course_discovery', 'career_counsellor', 'learning_assistant', 'oral_assessment', 'ocr_exam', 'mock_interview', 'jobs_marketplace', 'placement_confirm', 'retention_checkin', 'salary_slip', 'stipend_status', 'grievance', 'notifications'],
+  trainee: ['skill_passport', 'course_discovery', 'career_counsellor', 'learning_assistant', 'oral_assessment', 'ocr_exam', 'mock_interview', 'jobs_marketplace', 'mentor_directory', 'mentor_profile', 'posts_feed', 'post_detail', 'placement_confirm', 'retention_checkin', 'salary_slip', 'stipend_status', 'grievance', 'notifications'],
   trainer: ['attendance', 'lesson_delivery', 'quiz', 'at_risk', 'notifications'],
   training_centre: ['tc_demand_board', 'centre_dashboard', 'batches', 'cert_pipeline', 'placement_declare', 'retention_checkin', 'inspection', 'at_risk', 'notifications'],
   training_partner: ['tp_demand_master', 'tp_rollup', 'tp_enrollment', 'tp_certification', 'tp_placement', 'tp_retention', 'tp_schemes', 'placement_declare', 'batches', 'at_risk', 'notifications'],
@@ -243,6 +263,7 @@ export const ROLE_CANVASES = {
   nsdc_officer: ['national_overview', 'candidates_analytics', 'placement_dashboard', 'retention_dashboard', 'training_partners', 'batches_analytics', 'sectors_analytics', 'outcomes', 'apprenticeships', 'war_room', 'india_heatmap', 'cert_dashboard', 'scheme_analytics', 'broadcast', 'notifications'],
   funder: ['funder_outcomes', 'money_outcomes', 'scheme_analytics', 'notifications'],
   stipend_officer: ['stipend_queue', 'stipend_retry', 'notifications'],
+  mentor: ['mentor_profile', 'posts_feed', 'post_detail', 'notifications'],
 }
 
 export const NOTIFICATION_PERMISSIONS = {
@@ -256,6 +277,7 @@ export const NOTIFICATION_PERMISSIONS = {
   nsdc_officer:      { canCreateBroadcast: true,  canCreateReminder: true,  canViewNotifications: true },
   funder:            { canCreateBroadcast: false, canCreateReminder: false, canViewNotifications: true },
   stipend_officer:   { canCreateBroadcast: false, canCreateReminder: true,  canViewNotifications: true },
+  mentor:            { canCreateBroadcast: false, canCreateReminder: false, canViewNotifications: true },
 }
 
 export function defaultBotsFor(role) { return ROLE_BOTS[role] || [] }

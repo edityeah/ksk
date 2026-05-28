@@ -1,12 +1,24 @@
 import { useApp } from '../context/AppContext.jsx'
 import { ROLE_LABELS, ROLE_SCOPES } from '../roles/roleConfig.js'
-import { Bell, LogOut, ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { Bell, ChevronDown } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import RoleSwitcher from './RoleSwitcher.jsx'
 
 export default function TopBar() {
-  const { user, role, signOut, notifications } = useApp()
+  const { user, role, notifications } = useApp()
   const [open, setOpen] = useState(false)
+  const popoverRef = useRef(null)
   const unread = notifications.filter(n => !n.readAt).length
+
+  // Close the dropdown when clicking outside it.
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [open])
 
   return (
     <div className="bg-white border-b border-bdr-light flex items-center px-4 py-2.5 sticky top-0 z-30">
@@ -19,7 +31,7 @@ export default function TopBar() {
           <Bell className="w-5 h-5 text-txt-secondary" />
           {unread > 0 && <span className="absolute -top-0.5 -right-0.5 bg-danger text-white text-[10px] rounded-pill w-4 h-4 flex items-center justify-center">{unread}</span>}
         </button>
-        <div className="relative">
+        <div className="relative" ref={popoverRef}>
           <button onClick={() => setOpen(o => !o)}
             className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-100">
             <div className="w-7 h-7 rounded-pill bg-primary-light text-primary-dark flex items-center justify-center text-xs font-semibold">
@@ -32,14 +44,8 @@ export default function TopBar() {
             <ChevronDown className="w-4 h-4 text-txt-secondary" />
           </button>
           {open && (
-            <div className="absolute right-0 mt-1 w-56 bg-white rounded-card shadow-modal border border-bdr-light p-2 z-40">
-              <div className="px-3 py-2 text-xs text-txt-secondary border-b border-bdr-light">
-                <div className="font-medium text-txt-primary">{user?.name}</div>
-                <div>{ROLE_LABELS[role]}</div>
-              </div>
-              <button onClick={signOut} className="w-full mt-1 flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 rounded">
-                <LogOut className="w-4 h-4" /> Sign out
-              </button>
+            <div className="absolute right-0 mt-1 z-40">
+              <RoleSwitcher onClose={() => setOpen(false)} />
             </div>
           )}
         </div>

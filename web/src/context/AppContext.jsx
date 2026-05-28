@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { api, clearToken, getToken, setToken } from '../api/client.js'
+import { DEMO_PASSWORD, getDemoUser } from '../roles/demoUsers.js'
 
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
@@ -18,7 +19,14 @@ function loadSession() {
 function saveSession(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)) } catch {} }
 
 export function AppProvider({ children }) {
-  const persisted = loadSession()
+  // CRITICAL: only restore persisted session state if we actually still have
+  // a JWT in localStorage. Otherwise we end up with the UI showing the user
+  // as logged in (cached user/role/meExtra) but every authed API call 401s
+  // because the token is gone — leaving them stuck on screens like Find Jobs
+  // with "unauthorized" errors and no path forward (the 401 auto-bounce in
+  // api/client.js only triggers when a token IS attached). Treating
+  // "no token" as "no session" forces them back to splash to log in fresh.
+  const persisted = getToken() ? loadSession() : null
   const [screen, setScreenRaw] = useState(persisted?.screen || 'splash')
   const [stack, setStack] = useState(persisted?.stack || ['splash'])
   const [role, setRole] = useState(persisted?.role || null)
@@ -104,6 +112,36 @@ export function AppProvider({ children }) {
     setTimeout(() => { signingOut.current = false }, 100)
   }, [])
 
+  // Hot-swap the logged-in user to a different role using the seeded demo
+  // credentials in roles/demoUsers.js. No logout-then-login dance — just
+  // clear current state, mint a new JWT, and land on home as the new role.
+  // Returns true on success, false on failure (caller can show a toast).
+  const switchRole = useCallback(async (targetRole) => {
+    const demo = getDemoUser(targetRole)
+    if (!demo) {
+      console.warn('[switchRole] no demo credentials for role', targetRole)
+      return false
+    }
+    if (targetRole === role) return true   // already there
+    try {
+      const r = await api.sidhLogin(demo.sidhId, DEMO_PASSWORD)
+      if (!r?.token || !r?.user) throw new Error('login response missing token/user')
+      // Wipe the per-session UI state that doesn't belong to the new identity.
+      setCanvas(null)
+      setNotifications([])
+      setMeExtra(null)
+      // Install the new token + user, then refresh extra profile data.
+      setToken(r.token)
+      setUser(r.user); setRole(r.user.role)
+      try { const me = await api.me(); setMeExtra(stripUser(me)) } catch {}
+      setScreenRaw('home'); setStack(['home'])
+      return true
+    } catch (e) {
+      console.error('[switchRole] failed', e?.message || e)
+      return false
+    }
+  }, [role])
+
   // ── canvas ────────────────────────────────────────────────────────────
   const openCanvas = useCallback((ctx) => setCanvas(ctx), [])
   const closeCanvas = useCallback(() => setCanvas(null), [])
@@ -152,7 +190,7 @@ export function AppProvider({ children }) {
     screen, stack, navigate, goBack,
     role, user, meExtra, lang, setLang,
     isAuthenticated: !!role,
-    completeLogin, signOut,
+    completeLogin, signOut, switchRole,
     canvas, openCanvas, closeCanvas, updateCanvas,
     toast, showToast,
     notifications, refreshNotifications: async () => {
@@ -160,7 +198,7 @@ export function AppProvider({ children }) {
     },
     activeBot, setActiveBot,
     threads, refreshThreads, newChat, openThread,
-  }), [screen, stack, navigate, goBack, role, user, meExtra, lang, canvas, toast, notifications, activeBot, threads, completeLogin, signOut, openCanvas, closeCanvas, updateCanvas, showToast, refreshThreads, newChat, openThread])
+  }), [screen, stack, navigate, goBack, role, user, meExtra, lang, canvas, toast, notifications, activeBot, threads, completeLogin, signOut, switchRole, openCanvas, closeCanvas, updateCanvas, showToast, refreshThreads, newChat, openThread])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

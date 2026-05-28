@@ -18,7 +18,7 @@ datasource db {
 
 model User {
   id           String   @id @default(cuid())
-  role         String // trainee | trainer | training_centre | training_partner | assessor | ssc | employer | nsdc_officer | funder | stipend_officer
+  role         String // trainee | trainer | training_centre | training_partner | assessor | ssc | employer | nsdc_officer | funder | stipend_officer | mentor
   name         String
   phone        String?  @unique
   aadhaar      String?  @unique
@@ -39,6 +39,9 @@ model User {
   placementsDeclared Placement[]      @relation("tpDeclarant")
   notifications      Notification[]
   chatThreads        ChatThread[]
+  mentorProfile      MentorProfile?         @relation("mentorOfUser")
+  subscriptionsMade  MentorSubscription[]   @relation("subscriberOfSub")
+  posts              Post[]                 @relation("authorOfPost")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,13 +49,15 @@ model User {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Sector {
-  id        String     @id @default(cuid())
-  code      String     @unique // RAS | HLT | TEX | LOG | BFSI | CON ...
-  name      String
-  sscId     String?
-  ssc       Ssc?       @relation(fields: [sscId], references: [id])
-  jobRoles  JobRole[]
-  employers Employer[]
+  id             String          @id @default(cuid())
+  code           String          @unique // RAS | HLT | TEX | LOG | BFSI | CON ...
+  name           String
+  sscId          String?
+  ssc            Ssc?            @relation(fields: [sscId], references: [id])
+  jobRoles       JobRole[]
+  employers      Employer[]
+  mentorProfiles MentorProfile[]
+  posts          Post[]          @relation("postSector")
 }
 
 model Ssc {
@@ -515,6 +520,96 @@ model KnowledgeChunk {
   module     String?
   tokens     Int      @default(0)
   createdAt  DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MENTORS + POSTS
+// ─────────────────────────────────────────────────────────────────────────────
+// Mentor = an industry practitioner who learners can subscribe to + book 1:1
+// slots with. Stored as a User with role='mentor' plus a MentorProfile row
+// holding the rich profile data. The User row carries login (sidhId+pw) and
+// is also the FK target for Post.author when the mentor writes a post.
+
+model MentorProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation("mentorOfUser", fields: [userId], references: [id])
+  title        String   // e.g. "Store Operations Lead"
+  company      String   // e.g. "Reliance Retail"
+  sectorId     String?
+  sector       Sector?  @relation(fields: [sectorId], references: [id])
+  yearsExp     Int      @default(0)
+  bio          String   @default("")
+  languages    String   @default("[]") // JSON array of language codes: ["en","hi"]
+  city         String?
+  state        String?
+  photoUrl     String?
+  // Optional pricing — for v1 we mark mentors as free OR paid; full payment
+  // wiring lives in a later phase.
+  hourlyRate   Int?     // ₹ per hour, null = free / pay-what-you-want
+  available    Boolean  @default(true) // accepting new slot requests?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions MentorSubscription[]
+
+  @@index([sectorId])
+}
+
+// One row per (mentor, subscriber). Used for the "X subscribers" count on the
+// profile and to power a "My mentors" view later. Idempotent via @@unique.
+model MentorSubscription {
+  id              String        @id @default(cuid())
+  mentorProfileId String
+  mentorProfile   MentorProfile @relation(fields: [mentorProfileId], references: [id])
+  subscriberId    String
+  subscriber      User          @relation("subscriberOfSub", fields: [subscriberId], references: [id])
+  createdAt       DateTime      @default(now())
+
+  @@unique([mentorProfileId, subscriberId])
+  @@index([subscriberId])
+}
+
+// Post — author-agnostic content card. Author can be any user (trainee, TC,
+// TP, mentor). For v1: text body + optional single image (data URL stored as
+// `imageData`, kept small via client-side resize). Feed is global, ordered
+// by createdAt desc. Likes/comments deferred — first cut is read-only feed
+// + create.
+model Post {
+  id         String   @id @default(cuid())
+  authorId   String
+  author     User     @relation("authorOfPost", fields: [authorId], references: [id])
+  // Author-written title. Optional — note-style posts can leave it blank and
+  // the card uses the first line of body. Event / opening / announcement
+  // posts should set it so the feed card has a strong primary line.
+  title      String?
+  body       String
+  imageData  String? // data URL, base64 jpeg/png
+  // Optional tagging so the feed can be filtered later (sector chip etc).
+  sectorId   String?
+  sector     Sector?  @relation("postSector", fields: [sectorId], references: [id])
+
+  // Post kind drives how the card + detail page render.
+  //   note         — default, plain text post (tip, question, opinion)
+  //   event        — job fair / open day / webinar with eventAt + venue
+  //   opening      — direct job opening (employer / centre / mentor referral)
+  //   announcement — scheme launch, deadline, policy note
+  //   milestone    — placement story, batch milestone, success snapshot
+  kind       String   @default("note")
+
+  // Event metadata — only meaningful when kind='event' or 'opening' with a deadline.
+  eventAt    DateTime?
+  venue      String?
+
+  // Optional call-to-action button rendered on card + detail.
+  ctaLabel   String?
+  ctaUrl     String?
+
+  createdAt  DateTime @default(now())
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([kind])
 }
 
 model OtpCode {

@@ -51,6 +51,16 @@ r.get('/', async (req, res, next) => {
         include: { centre: true, track: true, trainees: true },
       })
       extra = { batches }
+    } else if (role === 'mentor') {
+      // Hydrate the mentor's own profile so the mentor home view can render
+      // "My Mentor Profile" directly (instead of needing a follow-up call
+      // by mentorId, which the user doesn't know).
+      const mp = await prisma.mentorProfile.findUnique({
+        where: { userId: req.user.id },
+        include: { sector: true },
+      })
+      const subscriberCount = mp ? await prisma.mentorSubscription.count({ where: { mentorProfileId: mp.id } }) : 0
+      extra = { mentor: mp ? { ...mp, subscriberCount } : null }
     }
     res.json({
       user: {

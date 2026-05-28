@@ -2,7 +2,8 @@
 // profile pill at the bottom; main panel has a friendly greeting, a voice CTA,
 // then "OPEN AN APP" grid of pastel feature cards. Mobile collapses.
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import RoleSwitcher from '../components/RoleSwitcher.jsx'
 import { useApp } from '../context/AppContext.jsx'
 import { api } from '../api/client.js'
 import { defaultBotsFor, suggestionsFor, homeLayoutFor, ROLE_LABELS, ROLE_SCOPES } from '../roles/roleConfig.js'
@@ -135,7 +136,7 @@ function Shell({ mobile }) {
         </div>
 
         <div className="p-3 border-t border-bdr">
-          <ProfilePill onSignOut={ctx.signOut} />
+          <ProfilePill />
         </div>
       </aside>
       {showSidebar && <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setShowSidebar(false)} />}
@@ -197,7 +198,7 @@ function ThreadGroup({ title, threads, onPick }) {
   )
 }
 
-function ProfilePill({ onSignOut }) {
+function ProfilePill() {
   const { user, role, meExtra } = useApp()
   const initials = (user?.name || '?').split(' ').map(s => s[0]).slice(0, 2).join('')
   const subline =
@@ -207,8 +208,17 @@ function ProfilePill({ onSignOut }) {
     role === 'training_partner' ? (meExtra?.tp?.name || ROLE_LABELS[role]) :
     ROLE_LABELS[role]
   const [open, setOpen] = useState(false)
+  const popoverRef = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [open])
   return (
-    <div className="relative">
+    <div className="relative" ref={popoverRef}>
       <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-surface-page">
         <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-[13px] font-bold flex-shrink-0">{initials}</div>
         <div className="flex-1 min-w-0 text-left">
@@ -218,14 +228,8 @@ function ProfilePill({ onSignOut }) {
         <ChevronUp className={`w-4 h-4 text-txt-tertiary transition-transform ${open ? '' : 'rotate-180'}`} />
       </button>
       {open && (
-        <div className="absolute bottom-full mb-2 left-0 right-0 bg-white rounded-2xl shadow-modal border border-bdr-light p-1.5 z-10">
-          <div className="px-3 py-2 border-b border-bdr-light mb-1">
-            <div className="text-[11px] uppercase tracking-wider font-bold text-primary">{ROLE_LABELS[role]}</div>
-            <div className="text-[11px] text-txt-secondary mt-0.5">{ROLE_SCOPES[role]}</div>
-          </div>
-          <button onClick={onSignOut} className="w-full flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-rose-50 rounded-lg text-danger">
-            <LogOut className="w-4 h-4" /> Sign out
-          </button>
+        <div className="absolute bottom-full mb-2 left-0 right-0 z-10">
+          <RoleSwitcher onClose={() => setOpen(false)} />
         </div>
       )}
     </div>
@@ -325,33 +329,69 @@ function GreetingPanel({ ctx, bots, chips, onSend, onPickBot }) {
 // Three-section app grid for learner role — matches the funder demo's
 // "bot works across 3 stages of life" narrative.
 const SECTION_META = {
-  passport:   { title: 'My Skill Passport',       subtitle: 'Identity, certificates, profile',                 accent: 'from-sky-50 to-white',     ring: 'ring-sky-200',     dot: 'bg-sky-500' },
-  employment: { title: 'Employment Confirmation', subtitle: 'Placement, retention, payslip, grievances',       accent: 'from-emerald-50 to-white', ring: 'ring-emerald-200', dot: 'bg-emerald-500' },
-  other:      { title: 'Other Services',          subtitle: 'Discover courses, AI coach, jobs, alerts',        accent: 'from-violet-50 to-white',  ring: 'ring-violet-200',  dot: 'bg-violet-500' },
+  passport:   { title: 'My Skill Passport',       subtitle: 'Identity, certificates, profile',                                                 accent: 'from-sky-50 to-white',     ring: 'ring-sky-200',     dot: 'bg-sky-500' },
+  employment: { title: 'Employment Confirmation', subtitle: 'Placement, retention, payslip, grievances, stipend, scheme alerts',               accent: 'from-emerald-50 to-white', ring: 'ring-emerald-200', dot: 'bg-emerald-500' },
+  other:      { title: 'AI For All',              subtitle: 'AI coach, learning, mock interviews, course + job discovery',                     accent: 'from-violet-50 to-white',  ring: 'ring-violet-200',  dot: 'bg-violet-500' },
 }
-const SECTION_ORDER = ['passport', 'employment', 'other']
+// AI For All first, then Employment Confirmation, then My Skill Passport.
+const SECTION_ORDER = ['other', 'employment', 'passport']
+
+// Sub-groups inside "AI For All". Other sections don't subsection their tiles.
+// Keys match the `subsection` field on each bot in roleConfig. Status tiles
+// (stipend + updates) used to live here under a third "Status & Alerts"
+// sub-group — they've moved to the Employment Confirmation section instead,
+// since they're tied to a trainee's placement / scheme membership lifecycle.
+const SUBSECTION_META = {
+  coaches:  { title: 'AI Coaches & Tutors', subtitle: 'Career guidance, learning, interview practice' },
+  discover: { title: 'Discover & Connect',  subtitle: 'Courses, jobs, industry mentors, community posts' },
+}
+const SUBSECTION_ORDER = ['coaches', 'discover']
 
 function SectionedAppGrid({ bots, onPickBot }) {
   const grouped = SECTION_ORDER.map(key => ({ key, meta: SECTION_META[key], tiles: bots.filter(b => b.section === key) }))
                                .filter(g => g.tiles.length > 0)
   return (
     <div className="mt-10 space-y-6">
-      {grouped.map(({ key, meta, tiles }, idx) => (
-        <section key={key} className={`rounded-2xl bg-gradient-to-br ${meta.accent} border border-bdr-light ring-1 ${meta.ring}/40 p-4`}>
-          <div className="flex items-baseline justify-between mb-3">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-[2px] text-primary inline-flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-                Stage {idx + 1} · {meta.title}
+      {grouped.map(({ key, meta, tiles }) => {
+        // Determine if this section uses sub-sections — only if any tile in
+        // the section has a `subsection` set.
+        const subs = SUBSECTION_ORDER
+          .map(subKey => ({ subKey, subMeta: SUBSECTION_META[subKey], subTiles: tiles.filter(t => t.subsection === subKey) }))
+          .filter(g => g.subTiles.length > 0)
+        const hasSubs = subs.length > 0
+        return (
+          <section key={key} className={`rounded-2xl bg-gradient-to-br ${meta.accent} border border-bdr-light ring-1 ${meta.ring}/40 p-4`}>
+            <div className="flex items-baseline justify-between mb-3">
+              <div>
+                <div className="text-[13px] font-bold text-txt-primary inline-flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+                  {meta.title}
+                </div>
+                <div className="text-[12px] text-txt-secondary mt-0.5">{meta.subtitle}</div>
               </div>
-              <div className="text-[12px] text-txt-secondary mt-0.5">{meta.subtitle}</div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {tiles.map(b => <FeatureCard key={b.id} bot={b} onClick={() => onPickBot(b)} />)}
-          </div>
-        </section>
-      ))}
+            {hasSubs ? (
+              <div className="space-y-4">
+                {subs.map(({ subKey, subMeta, subTiles }) => (
+                  <div key={subKey}>
+                    <div className="text-[11px] uppercase tracking-wider font-bold text-txt-tertiary mb-2">
+                      {subMeta.title}
+                      <span className="ml-2 normal-case font-normal text-txt-secondary/80">· {subMeta.subtitle}</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {subTiles.map(b => <FeatureCard key={b.id} bot={b} onClick={() => onPickBot(b)} />)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {tiles.map(b => <FeatureCard key={b.id} bot={b} onClick={() => onPickBot(b)} />)}
+              </div>
+            )}
+          </section>
+        )
+      })}
     </div>
   )
 }

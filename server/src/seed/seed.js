@@ -34,6 +34,8 @@ async function wipe() {
     prisma.salarySlip.deleteMany(), prisma.retentionCheckin.deleteMany(), prisma.placement.deleteMany(),
     prisma.stipend.deleteMany(), prisma.certificate.deleteMany(), prisma.assessment.deleteMany(),
     prisma.attendance.deleteMany(), prisma.jobPosting.deleteMany(),
+    prisma.post.deleteMany(),
+    prisma.mentorSubscription.deleteMany(), prisma.mentorProfile.deleteMany(),
     prisma.trainee.deleteMany(), prisma.batch.deleteMany(),
     prisma.trackJobRole.deleteMany(), prisma.track.deleteMany(),
     prisma.trainingCentre.deleteMany(), prisma.trainingPartner.deleteMany(),
@@ -503,12 +505,26 @@ async function main() {
   }
 
   // ── Job postings ────────────────────────────────────────────────────────
-  await prisma.jobPosting.create({
-    data: { employerId: employer.id, title: 'Retail Sales Associate', jobRoleQp: 'RAS/Q0103', ctcMonthly: 14000, location: 'Patna', openings: 5 },
-  })
-  await prisma.jobPosting.create({
-    data: { employerId: employer2.id, title: 'Cashier (Store)', jobRoleQp: 'RAS/Q0103', ctcMonthly: 13500, location: 'Lucknow', openings: 3 },
-  })
+  // Mix of retail roles across the two seed employers — gives the Find Jobs
+  // canvas enough variety that the partner-listing actually demos as a real
+  // marketplace. NSQF L3 retail belt, Bihar / UP / MP / Jharkhand region.
+  const jobsToSeed = [
+    // Reliance Retail — Patna cluster
+    { employerId: employer.id,  title: 'Retail Sales Associate',     jobRoleQp: 'RAS/Q0103', ctcMonthly: 14000, location: 'Patna',     openings: 5 },
+    { employerId: employer.id,  title: 'Store Operations Assistant', jobRoleQp: 'RAS/Q0104', ctcMonthly: 15500, location: 'Patna',     openings: 3 },
+    { employerId: employer.id,  title: 'Customer Service Executive', jobRoleQp: 'RAS/Q0105', ctcMonthly: 14500, location: 'Muzaffarpur', openings: 2 },
+    { employerId: employer.id,  title: 'Visual Merchandiser',        jobRoleQp: 'RAS/Q0106', ctcMonthly: 16000, location: 'Patna',     openings: 1 },
+    { employerId: employer.id,  title: 'Inventory Clerk',            jobRoleQp: 'LSC/Q2304', ctcMonthly: 13000, location: 'Bhagalpur', openings: 4 },
+    // Vishal Mega Mart — Lucknow cluster
+    { employerId: employer2.id, title: 'Cashier (Store)',            jobRoleQp: 'RAS/Q0103', ctcMonthly: 13500, location: 'Lucknow',   openings: 3 },
+    { employerId: employer2.id, title: 'Floor Supervisor',           jobRoleQp: 'RAS/Q0107', ctcMonthly: 18000, location: 'Lucknow',   openings: 2 },
+    { employerId: employer2.id, title: 'Warehouse Assistant',        jobRoleQp: 'LSC/Q2303', ctcMonthly: 14500, location: 'Kanpur',    openings: 4 },
+    { employerId: employer2.id, title: 'Billing Executive',          jobRoleQp: 'RAS/Q0108', ctcMonthly: 15000, location: 'Varanasi',  openings: 2 },
+    { employerId: employer2.id, title: 'Delivery Associate (Store)', jobRoleQp: 'LSC/Q1101', ctcMonthly: 13500, location: 'Lucknow',   openings: 6 },
+  ]
+  for (const j of jobsToSeed) {
+    await prisma.jobPosting.create({ data: j })
+  }
 
   // ── Notifications ───────────────────────────────────────────────────────
   console.log('[seed] notifications…')
@@ -539,6 +555,190 @@ async function main() {
   // ── Knowledge base seed (raw chunks; embeddings created by rag:ingest) ──
   console.log('[seed] knowledge stubs (run npm run rag:ingest to populate embeddings)…')
 
+  // ── Mentors + community posts ───────────────────────────────────────────
+  // Six industry mentors spread across the sectors most relevant to our
+  // seeded trainees (retail, logistics, telecom, BFSI, healthcare, IT-ITeS).
+  // Each gets a User row + MentorProfile + 1-2 seed posts so the directory
+  // and the post feed have content immediately on a fresh DB.
+  console.log('[seed] mentors…')
+  // Mentor blueprints. `photo` is a stable Unsplash portrait URL pinned to a
+  // photo of an Indian person — every URL below was visually verified before
+  // committing (the randomuser.me approach we tried first gave Indian names
+  // attached to Western faces, which broke trust). Photos were picked to
+  // match each mentor's archetype (senior healthcare → older man w/ glasses,
+  // corporate banker → woman in blazer, etc.). If Unsplash ever goes down
+  // the frontend's Avatar component falls back to gradient + initials.
+  const UNS = (id) => `https://images.unsplash.com/${id}?w=400&h=400&fit=crop&q=80`
+  const mentorBlueprints = [
+    { sidh: 'MNT-RR-001', name: 'Suresh Iyer',          phone: '9100000001', sector: 'RAS',  title: 'Store Operations Lead',      company: 'Reliance Retail',  years: 12, city: 'Mumbai',    state: 'MH', bio: 'Helping retail front-line associates grow into supervisor + cluster roles. Ex-DMart, Reliance Retail.',                  langs: ['en','hi','mr'], rate: null, photo: UNS('photo-1656221007870-dbb3900d6d99') },
+    { sidh: 'MNT-DL-001', name: 'Priya Sharma',         phone: '9100000002', sector: 'LOG',  title: 'Hub Operations Manager',     company: 'Delhivery',        years: 9,  city: 'Gurgaon',   state: 'HR', bio: 'Logistics & supply chain mentor. Specialise in last-mile + warehouse roles for NSQF L3-L5 candidates.',                  langs: ['en','hi'],      rate: 500,  photo: UNS('premium_photo-1682089810582-f7b200217b67') },
+    { sidh: 'MNT-JIO-001',name: 'Arjun Mehta',          phone: '9100000003', sector: 'TEL',  title: 'Field Engineering Lead',     company: 'Reliance Jio',     years: 11, city: 'Bengaluru', state: 'KA', bio: 'Field engineering + tower operations mentor. Started as a TTE myself, now lead a team of 40.',                          langs: ['en','hi','kn'], rate: 800,  photo: UNS('photo-1656221010175-bcfeadcb6017') },
+    { sidh: 'MNT-HDF-001',name: 'Anita Krishnan',       phone: '9100000004', sector: 'BFSI', title: 'Branch Banking Manager',     company: 'HDFC Bank',        years: 14, city: 'Chennai',   state: 'TN', bio: 'BFSI mentor. Spent 14 years in branch banking. Now coaching candidates entering as Customer Service Associates.',         langs: ['en','ta','hi'], rate: 700,  photo: UNS('premium_photo-1664478244612-d4b3238abd81') },
+    { sidh: 'MNT-APO-001',name: 'Dr. Ravi Naidu',       phone: '9100000005', sector: 'HLT',  title: 'Patient Care Training Head', company: 'Apollo Hospitals', years: 18, city: 'Hyderabad', state: 'TG', bio: 'Healthcare mentor for General Duty Assistant + Patient Care roles. Helping new GDAs avoid the burnout cliff in year 1.', langs: ['en','hi','te'], rate: null, photo: UNS('premium_photo-1682089804117-cea5d901647f') },
+    { sidh: 'MNT-INF-001',name: 'Karthik Subramanian',  phone: '9100000006', sector: 'ITS',  title: 'Engineering Manager',        company: 'Infosys',          years: 13, city: 'Pune',      state: 'MH', bio: 'IT-ITeS mentor. From a tier-3 town to EM at Infosys. Helping FutureSkills Prime graduates land their first dev role.',   langs: ['en','hi','ta'], rate: 1200, photo: UNS('photo-1656221009909-4f202547cd94') },
+  ]
+  const sectorByCodeLookup = await prisma.sector.findMany({})
+  const sectorByCodeMap = Object.fromEntries(sectorByCodeLookup.map(s => [s.code, s]))
+  let mentorCount = 0, postCount = 0
+  const mentorUserBySidh = {}
+  for (const m of mentorBlueprints) {
+    const sec = sectorByCodeMap[m.sector]
+    const u = await prisma.user.create({
+      data: {
+        role: 'mentor', name: m.name, phone: m.phone,
+        sidhId: m.sidh, passwordHash: pwHash, language: 'en',
+        profile: JSON.stringify({ mentor: true }),
+      },
+    })
+    mentorUserBySidh[m.sidh] = u
+    const profile = await prisma.mentorProfile.create({
+      data: {
+        userId:     u.id,
+        title:      m.title,
+        company:    m.company,
+        sectorId:   sec?.id || null,
+        yearsExp:   m.years,
+        bio:        m.bio,
+        languages:  JSON.stringify(m.langs),
+        city:       m.city,
+        state:      m.state,
+        photoUrl:   m.photo || null,
+        hourlyRate: m.rate,
+        available:  true,
+      },
+    })
+    mentorCount++
+    // Auto-subscribe Rani to retail mentors so "My mentors" has content.
+    if (profile.sectorId === sectorByCodeMap['RAS']?.id && rani) {
+      try {
+        await prisma.mentorSubscription.create({
+          data: { mentorProfileId: profile.id, subscriberId: rani.userId },
+        })
+      } catch {}
+    }
+  }
+
+  // ── Community feed posts ────────────────────────────────────────────────
+  // Mix of: job-fair events, direct openings, scheme announcements, milestone
+  // success stories, mentor tips, learner questions. The goal is that on
+  // first login a learner sees genuinely useful content — "where can I find
+  // a job", "what's happening at my centre", "what's a tip I can use today" —
+  // not just feel-good filler.
+  console.log('[seed] community posts…')
+  const tcPatUser    = await prisma.user.findFirst({ where: { sidhId: 'TC-PAT-001' } })
+  const tpHqUser     = await prisma.user.findFirst({ where: { sidhId: 'TP-MB-001' } })
+  const employerHRP  = await prisma.user.findFirst({ where: { sidhId: 'EST-RR-PAT-001' } })
+  const RAS  = sectorByCodeMap['RAS']?.id  || null
+  const LOG  = sectorByCodeMap['LOG']?.id  || null
+  const TEL  = sectorByCodeMap['TEL']?.id  || null
+  const BFSI = sectorByCodeMap['BFSI']?.id || null
+  const HLT  = sectorByCodeMap['HLT']?.id  || null
+  const ITS  = sectorByCodeMap['ITS']?.id  || null
+
+  // Helpers: dates relative to today.
+  const future = (d) => { const x = new Date(); x.setDate(x.getDate() + d); return x }
+  const past   = (d) => { const x = new Date(); x.setDate(x.getDate() - d); return x }
+
+  // Each entry is a Post.create input. createdAt overrides default to give
+  // the feed a believable timeline (oldest -> newest) instead of all-the-same.
+  const feedPosts = [
+    // ── Job fairs / events ────────────────────────────────────────────────
+    { authorId: tpHqUser?.id, sectorId: RAS,
+      kind: 'event', title: 'Reliance Retail · North India Hiring Fair',
+      body: 'Walk-in interviews for Retail Sales Associate, Cashier and Store Supervisor roles. 250+ openings across Patna, Lucknow, Kanpur, Varanasi, Bhopal. Bring your Skill Passport + ID proof. NSQF L3 / L4 candidates preferred. Selected candidates get an on-the-spot offer letter.',
+      eventAt: future(5), venue: 'Patliputra Convention Centre, Patna',
+      ctaLabel: 'Register for the fair', ctaUrl: 'https://example.com/fair/reliance-north-2026',
+      createdAt: past(0) },
+
+    { authorId: mentorUserBySidh['MNT-DL-001']?.id, sectorId: LOG,
+      kind: 'event', title: 'Delhivery Hub Walk-in · Patna + Muzaffarpur',
+      body: 'My ops team is hiring 80 Warehouse Assistants + 40 Sorters for two upcoming hub launches in Bihar. Same-day decisioning. Free transport from Patna Junction. NSQF L3 logistics certified candidates welcome. Drop a comment if you\'re planning to show up — I\'ll keep an eye out.',
+      eventAt: future(9), venue: 'Delhivery Hub Bypass, Patna',
+      ctaLabel: 'Get directions', ctaUrl: 'https://maps.google.com/?q=Delhivery+Hub+Patna',
+      createdAt: past(0) },
+
+    // ── Direct job openings ───────────────────────────────────────────────
+    { authorId: employerHRP?.id, sectorId: RAS,
+      kind: 'opening', title: 'We\'re hiring 15 RSAs · Reliance Retail Patna',
+      body: 'Reliance Retail — Patna Store Cluster is hiring 15 Retail Sales Associates. ₹13,500–₹15,000/mo, ESIC + EPFO from day 1. NSQF L3 in Retail (RAS/Q0103) required. Apply with your Skill Passport in one tap.',
+      ctaLabel: 'Apply with Skill Passport', ctaUrl: 'ksk://canvas/jobs_marketplace',
+      createdAt: past(1) },
+
+    { authorId: mentorUserBySidh['MNT-DL-001']?.id, sectorId: LOG,
+      kind: 'opening', title: 'Hiring at my Gurgaon hub — 6 Warehouse Asst slots',
+      body: 'My team at Delhivery Gurgaon has 6 open Warehouse Assistant slots. ₹14,500/mo, two shifts, free meals. Looking for early-morning-shift comfort + scanner literacy. Drop a comment with your KSK Skill Passport ID and I\'ll refer you directly.',
+      ctaLabel: 'Comment to refer', ctaUrl: null,
+      createdAt: past(2) },
+
+    // ── Scheme announcements ──────────────────────────────────────────────
+    { authorId: tpHqUser?.id, sectorId: null,
+      kind: 'announcement', title: 'PMKVY 5.0 Skill Vouchers go live next Monday',
+      body: 'PMKVY 5.0 launches with skill vouchers worth ₹8,000 per candidate — redeemable at accredited training centres. Pre-register on Skill India Digital Hub before this Friday to get the early-access batch. Your KSK Skill Passport is already eligible.',
+      eventAt: future(7),
+      ctaLabel: 'Read scheme guidelines', ctaUrl: 'https://skillindiadigital.gov.in/pmkvy5',
+      createdAt: past(2) },
+
+    { authorId: tpHqUser?.id, sectorId: null,
+      kind: 'announcement', title: 'NAPS stipend window closes 30th — file before then',
+      body: 'Reminder for apprentices on NAPS: claim window for this quarter closes on the 30th. Make sure your Aadhaar is seeded to your bank — most failures we see are Aadhaar–bank mismatches, not eligibility issues. Check status under My Stipend.',
+      ctaLabel: 'Check my stipend', ctaUrl: 'ksk://canvas/stipend_status',
+      createdAt: past(3) },
+
+    // ── Milestones / success stories ──────────────────────────────────────
+    { authorId: mentorUserBySidh['MNT-RR-001']?.id, sectorId: RAS,
+      kind: 'milestone', title: 'Two of my mentees promoted to Floor Supervisor 🎉',
+      body: 'Both started as RSA NSQF L3 candidates 14 months ago at Reliance Smart Patna. Career velocity in retail is real — show up, observe, ask. Happy to share the exact 90-day plan they followed if anyone wants it — drop a comment.',
+      createdAt: past(3) },
+
+    { authorId: tcPatUser?.id, sectorId: RAS,
+      kind: 'milestone', title: 'Batch RA-2026-04 crossed 60% attendance threshold',
+      body: 'Proud moment for Magic Bus Patna · Retail batch RA-2026-04. We crossed the 60% attendance threshold for the cohort — NAPS stipend processing starts next week. To the cohort: your first credit lands within ~30 days. Keep showing up.',
+      createdAt: past(4) },
+
+    // ── Mentor tips (high-value, learner-facing) ──────────────────────────
+    { authorId: mentorUserBySidh['MNT-RR-001']?.id, sectorId: RAS,
+      kind: 'note', title: 'Tip: own your store\'s SKU map in week 1',
+      body: 'Tip for first-time Retail Sales Associates — spend your first week mapping which SKU lives where in your store. Customers ask "where is X" 30+ times a day. The assistant who can answer in 5 seconds becomes the floor lead in 6 months.',
+      createdAt: past(5) },
+
+    { authorId: mentorUserBySidh['MNT-DL-001']?.id, sectorId: LOG,
+      kind: 'note', title: 'What I look for in a Warehouse Assistant interview',
+      body: 'Three things: (1) basic Excel + scanner literacy, (2) willingness to do early-morning shifts, (3) clarity on safety SOPs. Train on those before you apply — most candidates lose the role on (3), not (1).',
+      createdAt: past(5) },
+
+    { authorId: mentorUserBySidh['MNT-JIO-001']?.id, sectorId: TEL,
+      kind: 'note', title: 'Telecom Tower Tech: the first 90 days matter more than the cert',
+      body: 'For everyone training as a Telecom Tower Technician — the certification is just the door. The first 90 days on a tower site teach you more than 6 months in a centre. Treat your foreman like a second instructor.',
+      createdAt: past(6) },
+
+    { authorId: mentorUserBySidh['MNT-HDF-001']?.id, sectorId: BFSI,
+      kind: 'note', title: 'BFSI candidates: 2 things that get you past first filter',
+      body: 'A clean LinkedIn profile + the NCFE basic certificate gets you past the first filter at most private banks. Both are free + take a weekend. If you have not done both this month, that\'s where I\'d start.',
+      createdAt: past(6) },
+
+    { authorId: mentorUserBySidh['MNT-APO-001']?.id, sectorId: HLT,
+      kind: 'note', title: 'GDAs: negotiate your shift pattern BEFORE you join',
+      body: 'Most attrition I see in General Duty Assistants is people doing back-to-back nights for 3 months and then quitting. Negotiate your shift rotation in the offer letter, not after joining. Hospitals will agree more often than you think.',
+      createdAt: past(7) },
+
+    { authorId: mentorUserBySidh['MNT-INF-001']?.id, sectorId: ITS,
+      kind: 'note', title: 'FSP folks: pick a stack, don\'t chase "fullstack"',
+      body: 'For the FutureSkills Prime crowd — do NOT chase the "fullstack" tag in your first job. Pick one stack (MERN or Python+Django), build 2 small end-to-end projects, aim for a quality backend or frontend role. Breadth comes after you have shipped something.',
+      createdAt: past(8) },
+
+    // ── Learner posts / questions ─────────────────────────────────────────
+    { authorId: rani?.userId, sectorId: RAS,
+      kind: 'note', title: 'Help — "angry customer about a delayed delivery" mock',
+      body: 'Day 3 of my Retail Sales Associate training at Magic Bus Patna. Today we did mock customer scenarios. The "angry customer about a delayed delivery" one was the hardest — I froze. Any tips from working RSAs on how you handle this in real life?',
+      createdAt: past(9) },
+  ].filter(p => p.authorId) // skip rows where the author wasn't found
+
+  for (const p of feedPosts) {
+    await prisma.post.create({ data: p })
+    postCount++
+  }
+  console.log(`[seed] mentors=${mentorCount} posts=${postCount}`)
+
   console.log('\n[seed] done.')
   console.log('Counts:')
   for (const [name, count] of Object.entries({
@@ -550,6 +750,8 @@ async function main() {
     certificates: await prisma.certificate.count(),
     stipends: await prisma.stipend.count(),
     notifications: await prisma.notification.count(),
+    mentors: await prisma.mentorProfile.count(),
+    posts: await prisma.post.count(),
   })) console.log(`  ${name.padEnd(20)} ${count}`)
 }
 

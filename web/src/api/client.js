@@ -35,9 +35,14 @@ async function req(method, path, body) {
   const res = await fetch(path.startsWith('http') ? path : path, {
     method, headers, body: body ? JSON.stringify(body) : undefined,
   })
-  // 401 with a token attached means the token itself is no longer valid —
-  // wipe the session before anything else can read stale state.
-  if (res.status === 401 && tok) {
+  // 401 means the session is dead. Two flavours:
+  //   - Token attached but rejected (stale, signed with old JWT secret).
+  //   - No token attached at all (persisted UI state outlived its token —
+  //     localStorage's session.v1 survived but ksk.token.v1 was cleared).
+  // Either way, the cached UI is lying to the user; bounce to splash so
+  // they can log in fresh. Previously we only invalidated when a token was
+  // attached, which left the no-token case stuck on an error toast forever.
+  if (res.status === 401) {
     invalidateSession()
   }
   let json = null
