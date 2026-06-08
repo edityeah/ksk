@@ -135,20 +135,51 @@ The Render service at `ksk-ko64.onrender.com` is now redundant.
 ## Backups
 
 The Postgres data lives in the Docker volume `ksk-prod_ksk-prod-pgdata` on
-your laptop. To snapshot it:
+your laptop. Use the helper script:
 
 ```bash
-# Quick SQL dump (same format as the migration dump)
-docker exec ksk-prod-db pg_dump -U ksk ksk \
-  --no-owner --no-privileges --clean --if-exists \
-  > .local-data/ksk-backup-$(date +%Y%m%d-%H%M).sql
+# Take a fresh snapshot now (auto-timestamps + auto-prunes >14 old backups)
+./scripts/backup-now.sh
 
-# Restore later
-./scripts/restore-from-dump.sh .local-data/ksk-backup-YYYYMMDD-HHMM.sql
+# Or pass an explicit output path
+./scripts/backup-now.sh /tmp/ksk-pre-rebuild.sql
+
+# Restore any backup
+./scripts/restore-from-dump.sh .local-data/ksk-docker-20260608-1448.sql
 ```
 
-Worth doing before any disruptive change (schema migration, container rebuild
-with `down -v`, OS reinstall). The dump is ~1 MB; safe to keep multiple.
+`backup-now.sh` writes to `.local-data/` (gitignored) and is cron-friendly —
+add it to your crontab for daily snapshots:
+
+```cron
+0 3 * * *  cd /Users/adityeahspare/Documents/NSDC\ X\ CG/ksk && ./scripts/backup-now.sh >> backup.log 2>&1
+```
+
+**Off-tree safety copies.** For real safety, copy the latest dump out of the
+repo tree periodically (so a `git clean -fdx` or accidental `rm -rf .` can't
+take it with the rest of the working copy):
+
+```bash
+cp .local-data/ksk-docker-*.sql ~/Documents/ksk-backups/
+```
+
+**Restore verification.** The dumps round-trip cleanly into a scratch
+container (tested via `postgres:17-alpine` on port 5499). To re-verify:
+
+```bash
+docker run -d --rm --name ksk-restore-test \
+  -e POSTGRES_USER=ksk -e POSTGRES_PASSWORD=test -e POSTGRES_DB=ksk \
+  -p 127.0.0.1:5499:5432 postgres:17-alpine
+sleep 5
+docker exec -i ksk-restore-test psql -v ON_ERROR_STOP=1 -U ksk -d ksk \
+  < .local-data/ksk-docker-LATEST.sql
+docker exec ksk-restore-test psql -U ksk -d ksk -c \
+  'SELECT count(*) FROM "User";'
+docker stop ksk-restore-test
+```
+
+Run this before any disruptive change (schema migration, container rebuild
+with `down -v`, OS reinstall, laptop swap).
 
 ## Troubleshooting
 
