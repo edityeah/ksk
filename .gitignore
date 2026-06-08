@@ -3,8 +3,14 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.production.example
 *.db
 *.db-*
 .DS_Store
 prisma/migrations/dev.db*
 
+
+# Local-only data (DB dumps, Cloudflare credentials)
+.local-data/
+*.sql
+cloudflared/credentials/

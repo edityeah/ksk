@@ -1,0 +1,33 @@
+# Cloudflare Tunnel ingress for KSK.
+#
+# Setup (one-time):
+#   1. brew install cloudflared       # already installed if you've used gpcsk
+#   2. cloudflared tunnel login       # browser auth, picks your adityeah.ai zone
+#   3. cloudflared tunnel create ksk
+#      → prints a tunnel UUID and writes ~/.cloudflared/<UUID>.json
+#   4. Copy this file to ~/.cloudflared/config.yml and replace:
+#        - <TUNNEL-UUID>   with the UUID from step 3
+#        - <HOME>          with $HOME (e.g. /Users/adityeahspare)
+#   5. cloudflared tunnel route dns ksk ksk.adityeah.ai
+#      → creates the CNAME at Cloudflare DNS
+#
+# Run (foreground, watch logs):
+#   cloudflared tunnel run ksk
+#
+# Run (background, autostart on login — macOS):
+#   sudo cloudflared service install
+#
+# Health: cloudflared tunnel info ksk
+
+tunnel: <TUNNEL-UUID>
+credentials-file: <HOME>/.cloudflared/<TUNNEL-UUID>.json
+
+ingress:
+  # KSK production: single-container Express on 127.0.0.1:8788
+  # (mapped from container 8787 in docker-compose.tunnel.yml).
+  - hostname: ksk.adityeah.ai
+    service: http://localhost:8788
+
+  # Required fallback — anything that doesn't match a hostname above
+  # returns 404 instead of leaking the tunnel into other ports.
+  - service: http_status:404

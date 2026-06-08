@@ -1,0 +1,34 @@
+# Dev stack — just the Postgres for local development.
+#
+# Use this when you want to run `npm run dev` (vite + node --watch)
+# against a containerised database, exactly mirroring gpcsk's pattern.
+#
+# Bring up:    docker compose up -d
+# Stop:        docker compose down
+# Nuke data:   docker compose down -v
+#
+# DATABASE_URL in your server/.env should point at host port 5434 so
+# the prod stack (docker-compose.tunnel.yml, host port 5435) can run
+# side-by-side without conflict.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ksk-db
+    environment:
+      POSTGRES_USER: ksk
+      POSTGRES_PASSWORD: ksk_dev
+      POSTGRES_DB: ksk
+    ports:
+      - "5434:5432"
+    volumes:
+      - ksk-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ksk -d ksk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  ksk-pgdata:
