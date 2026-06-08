@@ -13,7 +13,7 @@
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: ksk-db
     environment:
       POSTGRES_USER: ksk
