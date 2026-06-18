@@ -1,14 +1,19 @@
 # Production stack behind Cloudflare Tunnel.
 #
-# Coexists with the dev stack (docker-compose.yml) AND with gpcsk on the
-# same host:
+# Coexists with the dev stack (docker-compose.yml) AND with gpcsk +
+# sambhav on the same host:
 #   dev  : ksk-db        on host port 5434
 #   prod : ksk-prod-db   on host port 5436 (gpcsk-prod-db owns 5435)
-#         ksk-prod-app  on host port 8788
+#         ksk-prod-app   on host port 8789 (sambhav-demo owns 8788)
 #
 # All host port bindings are 127.0.0.1 only — only cloudflared (running
 # on the host) can reach them. Cloudflare Tunnel terminates TLS at
-# ksk.adityeah.ai and tunnels HTTP to 127.0.0.1:8788.
+# ksk.adityeah.ai and tunnels HTTP to 127.0.0.1:8789.
+#
+# When adding more self-hosted apps on this host, pick a new free
+# port in the 8788–8799 range and update ~/.cloudflared/<app>.yml
+# in sync — last-writer-wins on collisions, so a port clash silently
+# hijacks one of the public URLs.
 #
 # Bring up:
 #   docker compose --project-name ksk-prod \
@@ -55,7 +60,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
     ports:
-      - "127.0.0.1:8788:8787"
+      - "127.0.0.1:8789:8787"
     environment:
       NODE_ENV: production
       PORT: "8787"

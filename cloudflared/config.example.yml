@@ -23,10 +23,11 @@ tunnel: <TUNNEL-UUID>
 credentials-file: <HOME>/.cloudflared/<TUNNEL-UUID>.json
 
 ingress:
-  # KSK production: single-container Express on 127.0.0.1:8788
-  # (mapped from container 8787 in docker-compose.tunnel.yml).
+  # KSK production: single-container Express on 127.0.0.1:8789
+  # (mapped from container 8787 in docker-compose.tunnel.yml). 8789
+  # because sambhav-demo on this host owns 8788.
   - hostname: ksk.adityeah.ai
-    service: http://localhost:8788
+    service: http://localhost:8789
 
   # Required fallback — anything that doesn't match a hostname above
   # returns 404 instead of leaking the tunnel into other ports.

@@ -11,7 +11,7 @@ Render, no Heroku, no public IP, no recurring fees. Mirrors the
 [ Cloudflare edge ]  (TLS terminates here)
               │  cloudflared tunnel: ksk (UUID 72f14f9a-…)
               ▼
-[ your laptop ]  127.0.0.1:8788  ──►  ksk-prod-app container  ──►  ksk-prod-db container
+[ your laptop ]  127.0.0.1:8789  ──►  ksk-prod-app container  ──►  ksk-prod-db container
 ```
 
 ## Files
@@ -20,7 +20,7 @@ Render, no Heroku, no public IP, no recurring fees. Mirrors the
 |---|---|
 | `Dockerfile` | Single-container build (Node alpine + built SPA + Express) |
 | `docker-compose.yml` | Dev stack — Postgres only, host port 5434 |
-| `docker-compose.tunnel.yml` | Prod stack — `ksk-prod-db` (5436) + `ksk-prod-app` (8788), both 127.0.0.1-bound |
+| `docker-compose.tunnel.yml` | Prod stack — `ksk-prod-db` (5436) + `ksk-prod-app` (8789), both 127.0.0.1-bound |
 | `.env.production.example` | Template; copy to `.env.production` (gitignored) and fill in |
 | `cloudflared/config.example.yml` | Template for `~/.cloudflared/ksk.yml` |
 | `scripts/restore-from-dump.sh` | Restores a `pg_dump` into the prod container |
@@ -50,7 +50,7 @@ credentials-file: /Users/<you>/.cloudflared/<UUID>.json
 
 ingress:
   - hostname: ksk.adityeah.ai
-    service: http://localhost:8788
+    service: http://localhost:8789
   - service: http_status:404
 ```
 
@@ -114,15 +114,21 @@ docker compose --project-name ksk-prod --env-file .env.production \
 
 ## Coexistence
 
-This host already runs `gpcsk` and `wellbeing` on neighbouring ports:
+This host runs several self-hosted apps; each has its own tunnel + ports:
 
 | Stack | DB port | App port | Tunnel |
 |---|---|---|---|
-| ksk    | 5436 | 8788 | ksk.adityeah.ai |
-| gpcsk  | 5435 | 8002 | gpcsk.adityeah.ai |
+| ksk     | 5436 | 8789 | ksk.adityeah.ai |
+| sambhav | —    | 8788 | sambhav.adityeah.ai |
+| gpcsk   | 5435 | 8002 | gpcsk.adityeah.ai |
 | wellbeing | (n/a) | 3000 / 8000 | wellbeing.adityeah.ai / api.adityeah.ai |
 
-Each tunnel has its own UUID + `~/.cloudflared/<name>.yml`; all three can run simultaneously.
+Each tunnel has its own UUID + `~/.cloudflared/<name>.yml`; all can run
+simultaneously. **Picking ports**: when adding a new app on this host,
+pick a free port in 8788–8799 and update its `~/.cloudflared/<app>.yml`
+in sync — Docker happily lets two containers bind the same host port
+and the loser silently disappears. KSK lost 8788 to Sambhav once for
+exactly this reason; that's why KSK now lives on 8789.
 
 ## What happens to the Render deploy?
 
@@ -185,7 +191,8 @@ with `down -v`, OS reinstall, laptop swap).
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `Bind for 127.0.0.1:8788 failed: port is already allocated` | A previous `ksk-prod-app` is still up, or some other process is on 8788 | `docker ps \| grep ksk` to find it; `docker rm -f ksk-prod-app` |
+| `Bind for 127.0.0.1:8789 failed: port is already allocated` | A previous `ksk-prod-app` is still up, or some other process is on 8789 | `docker ps \| grep -E "ksk\|8789"` to find it; `docker rm -f ksk-prod-app` |
+| `ksk.adityeah.ai` serves someone else's app | Two containers bound the same host port; the other one started later and took 8789 | `lsof -iTCP:8789 -sTCP:LISTEN`; restart KSK or move the other app to a different port |
 | `https://ksk.adityeah.ai` → "Tunnel error 1033" | Tunnel daemon not running | `cloudflared tunnel list` (looking for active connections); start with `cloudflared tunnel --config ~/.cloudflared/ksk.yml run ksk` |
 | App returns 500 from every API call | Schema drift between dump and current Prisma schema | `docker exec ksk-prod-app sh -c 'cd server && npx prisma db push'` |
 | Login works but `/api/mentors` returns 401 | Stale browser token (JWT_SECRET changed on rebuild) | Hard refresh (`Cmd+Shift+R`) — the AppContext bounces to splash automatically |
