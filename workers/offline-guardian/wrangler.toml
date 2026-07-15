@@ -1,0 +1,21 @@
+name = "ksk-offline-guardian"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+# Route: intercept every request to ksk.adityeah.ai. The Worker proxies to
+# the origin (cloudflared tunnel) when it's up, and serves the offline HTML
+# when it isn't. `zone_name` picks the adityeah.ai zone on Cloudflare so
+# wrangler creates the route without needing an explicit zone_id.
+routes = [
+  { pattern = "ksk.adityeah.ai/*", zone_name = "adityeah.ai" }
+]
+
+# Observability makes it easy to debug in the Cloudflare dashboard if the
+# Worker ever misbehaves (Cloudflare → Workers & Pages → ksk-offline-guardian
+# → Logs). Free tier includes sampled logs.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+# No environment variables, no KV, no secrets — the offline HTML is inlined
+# in src/index.js so the Worker is genuinely stateless and self-contained.

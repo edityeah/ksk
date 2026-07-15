@@ -24,6 +24,7 @@ Render, no Heroku, no public IP, no recurring fees. Mirrors the
 | `.env.production.example` | Template; copy to `.env.production` (gitignored) and fill in |
 | `cloudflared/config.example.yml` | Template for `~/.cloudflared/ksk.yml` |
 | `scripts/restore-from-dump.sh` | Restores a `pg_dump` into the prod container |
+| `workers/offline-guardian/` | Cloudflare Worker on `ksk.adityeah.ai/*` — replaces Bad Gateway with a crafted offline page when the laptop is asleep |
 
 ## One-time setup (already done on the current machine — here for the next box)
 
@@ -186,6 +187,47 @@ docker stop ksk-restore-test
 
 Run this before any disruptive change (schema migration, container rebuild
 with `down -v`, OS reinstall, laptop swap).
+
+## Offline page (laptop asleep)
+
+Because KSK runs on a laptop, visitors will occasionally hit `ksk.adityeah.ai`
+while the machine is asleep. Cloudflare's default "Error 1033 / Bad Gateway"
+screen looks broken; we replace it with a crafted page that tells them what's
+actually happening.
+
+The page is served by a Cloudflare Worker deployed from
+`workers/offline-guardian/`. It sits on the route `ksk.adityeah.ai/*` and:
+
+1. tries to reach the origin (through the tunnel) with an 8 s timeout,
+2. returns the app response unchanged if the origin is up,
+3. serves the offline HTML with `503 Service Unavailable` +
+   `Retry-After: 120` when the origin is unreachable (502/521/522/523/525/526/530
+   or any thrown fetch exception).
+
+The offline HTML auto-reloads client-side every 90 s so a visitor who
+leaves the tab open sees the app return the moment the laptop wakes.
+
+**Redeploy after an edit:**
+
+```bash
+cd workers/offline-guardian
+npx wrangler deploy
+```
+
+**Verify both paths** without waiting for a real sleep:
+
+```bash
+# Force origin down
+docker stop ksk-prod-app
+curl -s -o /dev/null -w "%{http_code}\n" https://ksk.adityeah.ai/   # → 503
+curl -s https://ksk.adityeah.ai/ | grep -oE '<title>[^<]+</title>'   # → KSK · Resting
+
+# Restore
+docker start ksk-prod-app
+```
+
+Free-tier limits (100k requests/day, 10ms CPU each) comfortably cover a
+demo. See `workers/offline-guardian/README.md` for the full rationale.
 
 ## Troubleshooting
 

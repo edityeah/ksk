@@ -14,3 +14,7 @@ prisma/migrations/dev.db*
 .local-data/
 *.sql
 cloudflared/credentials/
+
+# Wrangler local cache (contains OAuth account snapshot; not secret but no reason to ship)
+.wrangler/
+workers/**/.wrangler/
