@@ -32,19 +32,47 @@ const ORIGIN_TIMEOUT_MS = 8000
 // 530 — Cloudflare's canonical "tunnel error" wrapper (Argo Tunnel 1033 etc.)
 const ORIGIN_DOWN_STATUS = new Set([502, 521, 522, 523, 525, 526, 530])
 
+// Where the actual KSK app lives. Currently the Render web service —
+// we point at its public onrender.com URL rather than relying on the
+// ksk.adityeah.ai CNAME (which still points at a laptop-side Cloudflare
+// tunnel). The Worker sits at the edge and forwards here explicitly,
+// so laptop / tunnel state doesn't affect the public URL.
+//
+// If you migrate the origin again (self-hosted VPS, different Render
+// service, etc.), change this one constant + redeploy the Worker.
+const ORIGIN = 'https://ksk-ko64.onrender.com'
+
 export default {
   async fetch(request) {
-    // Only proxy same-origin requests. If someone hits an unrelated
-    // hostname routed through here somehow, just serve offline.
     const url = new URL(request.url)
     if (url.hostname !== 'ksk.adityeah.ai') return offlineResponse()
+
+    // Rewrite target: keep the path + query, swap the hostname to the
+    // Render origin. Preserve method / body / headers exactly, but
+    // replace Host so Render doesn't see ksk.adityeah.ai (Render
+    // routes by Host and the app isn't registered on that domain).
+    const targetUrl = ORIGIN + url.pathname + url.search
+    const headers = new Headers(request.headers)
+    headers.set('host', new URL(ORIGIN).host)
+    // Preserve visitor IP + protocol so the app's rate limiter / auth
+    // sees the real client IP through the two-hop proxy.
+    const cfIp = request.headers.get('cf-connecting-ip')
+    if (cfIp) headers.set('x-forwarded-for', cfIp)
+    headers.set('x-forwarded-proto', 'https')
+    headers.set('x-forwarded-host', 'ksk.adityeah.ai')
 
     try {
       const controller = new AbortController()
       const t = setTimeout(() => controller.abort(), ORIGIN_TIMEOUT_MS)
       let response
       try {
-        response = await fetch(request, { signal: controller.signal })
+        response = await fetch(targetUrl, {
+          method:      request.method,
+          headers,
+          body:        ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+          redirect:    'manual',
+          signal:      controller.signal,
+        })
       } finally {
         clearTimeout(t)
       }
