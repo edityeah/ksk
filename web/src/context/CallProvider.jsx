@@ -37,9 +37,17 @@ export function CallProvider({ children }) {
   // value object. Reading through the ref means the newest handler is
   // always used at dispatch time without re-creating the RTC session.
   const app = useApp()
-  const voiceCtxRef = useRef({ openCanvas: null, showToast: null })
+  const voiceCtxRef = useRef({ openCanvas: null, showToast: null, arise: null })
   voiceCtxRef.current.openCanvas = app?.openCanvas || null
   voiceCtxRef.current.showToast  = app?.showToast  || null
+  // `arise` is a per-canvas callback bag registered by the ARISE classroom
+  // canvas when it mounts (via bindArise below). Voice tools like
+  // arise_whiteboard_write read from voiceCtxRef.current.arise and no-op
+  // when nothing is bound. This keeps CallProvider decoupled from any
+  // specific canvas.
+  const bindArise = useCallback((bag) => {
+    voiceCtxRef.current.arise = bag || null
+  }, [])
 
   // Single source of truth for any in-progress call.
   // null = no call. Shape: { persona, mode, state, muted, screenSharing, threadId, startedAt, error?, title? }
@@ -425,6 +433,7 @@ CRITICAL BEHAVIOUR while screen share is active:
       startScreenShare, stopScreenShare,
       bindHandlers, bindVideoElement,
       screenStreamRef,           // exposed so the PiP preview can read the same stream
+      bindArise,                 // ARISE classroom registers whiteboard/day-complete callbacks here
     }}>
       {children}
     </CallCtx.Provider>

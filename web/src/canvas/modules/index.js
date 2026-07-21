@@ -48,6 +48,8 @@ import PostDetailCanvas from './PostDetailCanvas.jsx'
 // Trainer assessment scanner
 import TrainerAssessmentCaptureCanvas from './TrainerAssessmentCaptureCanvas.jsx'
 import TrainerAssessmentViewCanvas from './TrainerAssessmentViewCanvas.jsx'
+// Samsung ARISE MX digital-twin classroom
+import AriseClassroomCanvas from './AriseClassroomCanvas.jsx'
 import GenericCanvas from './GenericCanvas.jsx'
 
 export const CANVAS_MODULES = {
@@ -107,6 +109,9 @@ export const CANVAS_MODULES = {
   // Trainer assessment scanner
   trainer_assessment_capture: TrainerAssessmentCaptureCanvas,
   trainer_assessment_view:    TrainerAssessmentViewCanvas,
+
+  // Samsung ARISE MX classroom
+  arise_classroom:      AriseClassroomCanvas,
 
   // Generic placeholder for any type not yet built — renders a clean "coming next" page
   // Used for: career_counsellor, learning_assistant, oral_assessment, ocr_exam, mock_interview,
@@ -174,6 +179,7 @@ const META = {
   // Trainer assessment scanner
   trainer_assessment_capture: { title: 'Scan an assessment',    subtitle: 'OCR the marked paper into a score',                    icon: '📷' },
   trainer_assessment_view:    { title: 'Assessment dashboard',  subtitle: 'All scores you\'ve captured · averages · trends',     icon: '📊' },
+  arise_classroom:            { title: 'Samsung ARISE · MX',    subtitle: 'Digital-twin classroom for the mobile repair course', icon: '🎓' },
 }
 
 export function getCanvasMeta(type) {

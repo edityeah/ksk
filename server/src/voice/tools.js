@@ -39,10 +39,7 @@ export const CANVAS_CATALOG = [
 export const CANVAS_IDS = CANVAS_CATALOG.map(c => c.id)
 export const CANVAS_BY_ID = Object.fromEntries(CANVAS_CATALOG.map(c => [c.id, c]))
 
-// Single-tool catalogue for KSK v1. We deliberately DON'T expose every
-// Pravasi-style tool (panel cards, domain actions, etc.); those can be
-// layered on later. The MVP intent is: user says an intent → model
-// opens the matching canvas.
+// Canvas-open tool — the always-on default for every voice session.
 export const TOOLS = [
   {
     group: 'open',
@@ -63,14 +60,91 @@ export const TOOLS = [
   },
 ]
 
+// ── ARISE MX classroom tools ──────────────────────────────────────────────
+// Only exposed to the session when persona === 'arise_mx_teacher'. Kept in
+// its own list so the base voice catalogue stays lean for every other
+// persona.
+export const ARISE_TOOLS = [
+  {
+    name: 'arise_whiteboard_write',
+    description: 'Write on the classroom whiteboard so the trainee can see the key points as text while you speak. Call this the moment you introduce a new term, formula, or step-list; then continue explaining in voice.',
+    parameters: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['title', 'bullets', 'formula', 'definition', 'steps', 'note'],
+                description: 'title=short header; bullets=list; formula=math/equation; definition=term + explanation; steps=numbered procedure; note=inline callout' },
+        text: { type: 'string', description: 'Text to write. For bullets/steps, put one item per line.' },
+        clear: { type: 'boolean', description: 'If true, wipe the whiteboard before writing this block. Defaults to false — content stacks.' },
+      },
+      required: ['kind', 'text'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'arise_show_diagram',
+    description: 'Display a pre-authored diagram on the whiteboard. Use whenever you\'re explaining anything visual — a circuit, a symbol, a repair layout, a workflow.',
+    parameters: {
+      type: 'object',
+      properties: {
+        diagram_id: {
+          type: 'string',
+          enum: ['ohms_law', 'series_circuit', 'parallel_circuit', 'resistor_symbol', 'multimeter_layout',
+                 'pcb_layout', 'gsm_architecture', 'solder_joint_good_bad', 'phone_disassembly', 'esd_setup'],
+          description: 'Which pre-authored diagram to display',
+        },
+      },
+      required: ['diagram_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'arise_mark_day_complete',
+    description: 'Advance the trainee to the next day of the 21-day curriculum. Call ONLY when the trainee has demonstrably grasped that day\'s material (verified via at least one question they answered correctly). Never call just because time passed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        day_number: { type: 'integer', minimum: 1, maximum: 21, description: 'The day being marked complete.' },
+      },
+      required: ['day_number'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'arise_jump_to_chapter',
+    description: 'Jump to a specific chapter (1-17). Use when the trainee explicitly asks for a different topic. Confirm verbally first.',
+    parameters: {
+      type: 'object',
+      properties: {
+        chapter_number: { type: 'integer', minimum: 1, maximum: 17 },
+      },
+      required: ['chapter_number'],
+      additionalProperties: false,
+    },
+  },
+]
+
+const ARISE_TOOLS_BY_NAME = Object.fromEntries(ARISE_TOOLS.map(t => [t.name, t]))
+
 // Shape required by OpenAI Realtime session config (tools[] field).
-export function toOpenAIToolDefs() {
-  return TOOLS.map(t => ({
+// Pass `extraToolNames` from a persona builder to include persona-specific
+// tools (e.g. the ARISE classroom tools when persona=arise_mx_teacher).
+export function toOpenAIToolDefs({ extraToolNames = [] } = {}) {
+  const baseline = TOOLS.map(t => ({
     type: 'function',
     name: t.name,
     description: t.description,
     parameters: t.parameters,
   }))
+  const extras = extraToolNames
+    .map(n => ARISE_TOOLS_BY_NAME[n])
+    .filter(Boolean)
+    .map(t => ({
+      type: 'function',
+      name: t.name,
+      description: t.description,
+      parameters: t.parameters,
+    }))
+  return [...baseline, ...extras]
 }
 
 // Plain-text briefing appended to the session's `instructions` field so

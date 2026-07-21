@@ -17,6 +17,8 @@ import rateLimit from 'express-rate-limit'
 import { requireAuth } from '../auth/middleware.js'
 import { buildRoleContext } from '../llm/roleContext.js'
 import { toOpenAIToolDefs, toPersonaBriefing } from '../voice/tools.js'
+import { buildArisePersona } from '../voice/arisePersona.js'
+import { prisma } from '../db.js'
 
 const r = Router()
 r.use(requireAuth)
@@ -114,24 +116,40 @@ r.post('/session', async (req, res, next) => {
       return res.status(503).json({ error: 'openai_not_configured' })
     }
     const body = BodySchema.parse(req.body || {})
-    const base = PERSONA_PROMPTS[body.persona] || PERSONA_PROMPTS.general
-    // For Saathi (general), append the role-specific opener + data pack so the
-    // agent addresses an NSDC officer like an analyst, a trainee like a learner,
-    // and has the right dashboard numbers ready to quote.
-    const roleAddendum = buildRoleContext({ persona: body.persona, role: body.role })
-    const parts = [base]
-    if (roleAddendum) parts.push(roleAddendum)
-    parts.push(KB_DIRECTIVE)
-    parts.push(LANGUAGE_RULE)
-    // Voice-tool routing table appended AFTER the language rule so the
-    // model reads it late (near the end of the system prompt, higher
-    // recency weight). Only applies to the trainee-facing personas —
-    // other roles' voice sessions won't have canvas-open intents worth
-    // routing. For now we always append; if it starts confusing
-    // non-trainee sessions, gate on body.role === 'trainee'.
-    parts.push(toPersonaBriefing())
-    if (body.extraSystem) parts.push(body.extraSystem)
-    const instructions = parts.join('\n\n')
+
+    // ── ARISE MX teacher persona — completely different instruction shape
+    // (uses its own base prompt + chapter-specific RAG chunks). Skip the
+    // generic PERSONA_PROMPTS / role addendum / canvas-tool briefing.
+    let instructions
+    let extraToolNames = []
+    if (body.persona === 'arise_mx_teacher') {
+      // Look up the trainee's enrolment so the persona knows where they are
+      // in the 21-day journey. Non-trainee callers get day 1 defaults.
+      let currentDay = 1, currentChapter = 1, traineeName = req.user?.name || 'trainee'
+      if (req.user?.role === 'trainee') {
+        const trainee = await prisma.trainee.findUnique({ where: { userId: req.user.id } })
+        if (trainee) {
+          const en = await prisma.ariseEnrolment.findUnique({ where: { traineeId: trainee.id } })
+          if (en) { currentDay = en.currentDay; currentChapter = en.currentChapter }
+          traineeName = trainee.name
+        }
+      }
+      const persona = await buildArisePersona({ currentDay, currentChapter, traineeName })
+      instructions = persona.instructions
+      extraToolNames = persona.extraToolNames
+      if (body.extraSystem) instructions += '\n\n' + body.extraSystem
+    } else {
+      const base = PERSONA_PROMPTS[body.persona] || PERSONA_PROMPTS.general
+      const roleAddendum = buildRoleContext({ persona: body.persona, role: body.role })
+      const parts = [base]
+      if (roleAddendum) parts.push(roleAddendum)
+      parts.push(KB_DIRECTIVE)
+      parts.push(LANGUAGE_RULE)
+      // Voice-tool routing table appended late so it has recency weight.
+      parts.push(toPersonaBriefing())
+      if (body.extraSystem) parts.push(body.extraSystem)
+      instructions = parts.join('\n\n')
+    }
 
     const voice = body.voice || VOICE
     // GA Realtime API payload — session is wrapped under a `session` envelope
@@ -146,7 +164,7 @@ r.post('/session', async (req, res, next) => {
       // live in web/src/utils/voiceTools.js; dispatch happens in
       // web/src/utils/realtimeVoice.js when a response.function_call_
       // arguments.done event arrives on the data channel.
-      tools: toOpenAIToolDefs(),
+      tools: toOpenAIToolDefs({ extraToolNames }),
       // tool_choice: 'auto' is Realtime's default — the model decides
       // when to call a tool vs. just respond. Leaving it implicit.
       output_modalities: ['audio'],

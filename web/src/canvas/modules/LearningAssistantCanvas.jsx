@@ -1,9 +1,14 @@
 // Learning Assistant canvas — quick learning actions on top, AvatarCall below.
+//
+// Also hosts the entry point into the ARISE MX digital-twin classroom — a
+// pinned chip at the top of the canvas that switches into the Samsung ARISE
+// mode. Tap opens AriseClassroomCanvas via the shared canvas router; the
+// trainee's ARISE progress + tutor persona lives there.
 
 import { useState } from 'react'
 import AvatarCall from '../../components/AvatarCall.jsx'
 import { useApp } from '../../context/AppContext.jsx'
-import { BookOpen, HelpCircle, ListChecks, Mic, FileText, Sparkles, ChevronRight, MessageSquare } from 'lucide-react'
+import { BookOpen, HelpCircle, ListChecks, Mic, FileText, Sparkles, ChevronRight, MessageSquare, GraduationCap } from 'lucide-react'
 
 const TONES = {
   indigo: { bg: 'bg-indigo-100',  fg: 'text-indigo-700' },
@@ -15,7 +20,7 @@ const TONES = {
 }
 
 export default function LearningAssistantCanvas({ context }) {
-  const { meExtra } = useApp()
+  const { meExtra, openCanvas } = useApp()
   const threadId = context?.threadId || null
   const [pending, setPending] = useState(null)
   // Same WhatsApp-style behaviour as Career Counsellor: hide the hero + cards
@@ -54,6 +59,24 @@ export default function LearningAssistantCanvas({ context }) {
         <div className="text-[11px] font-bold uppercase tracking-[2px] text-primary">AI Learning Assistant</div>
         <h2 className="text-[20px] font-bold text-txt-primary leading-tight mt-1">Guru ji — your AI tutor</h2>
         <p className="text-[12px] text-txt-secondary mt-1 truncate">{ctxLine}</p>
+
+        {/* Samsung ARISE MX entry chip — takes trainee into the digital-twin
+            classroom for the Samsung-funded mobile-repair curriculum. */}
+        <button
+          onClick={() => openCanvas({ type: 'arise_classroom' })}
+          className="mt-3 w-full flex items-center gap-3 rounded-2xl border border-emerald-800/60 bg-gradient-to-br from-[#0F1E14] via-slate-950 to-[#0F1E14] px-4 py-3 text-left hover:from-slate-900 hover:to-slate-900 transition group">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-amber-300 flex items-center justify-center flex-shrink-0">
+            <GraduationCap className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] uppercase tracking-[2px] font-bold text-amber-300">Samsung · ARISE MX</div>
+            <div className="text-[13px] font-bold text-white leading-tight mt-0.5">Open the classroom</div>
+            <div className="text-[11px] text-emerald-100/70 leading-tight mt-0.5">
+              21-day mobile repair course — voice tutor writes on the blackboard as they teach
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-emerald-100/60 group-hover:text-white transition flex-shrink-0" />
+        </button>
       </div>
       )}
 

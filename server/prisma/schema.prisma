@@ -216,6 +216,7 @@ model Trainee {
   attendance        Attendance[]
   assessments       Assessment[]
   trainerAssessments TrainerAssessment[]
+  ariseEnrolment    AriseEnrolment?
   certificates      Certificate[]
   placements        Placement[]
   stipends          Stipend[]
@@ -613,6 +614,56 @@ model Post {
   @@index([authorId])
   @@index([createdAt])
   @@index([kind])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SAMSUNG ARISE MX — DIGITAL-TWIN CLASSROOM
+// ─────────────────────────────────────────────────────────────────────────────
+// A trainee enrolls once (AriseEnrolment). Every teaching session by the AI
+// tutor lands as an AriseLesson row for audit + resume. The trainee's
+// current position in the 21-day curriculum lives on the enrolment row so a
+// new voice call can pick up exactly where the last one ended.
+
+model AriseEnrolment {
+  id             String   @id @default(cuid())
+  traineeId      String   @unique
+  trainee        Trainee  @relation(fields: [traineeId], references: [id])
+  course         String   @default("arise_mx") // arise_mx | arise_vd | arise_da (only MX shipped in v1)
+  currentDay     Int      @default(1)          // 1..21
+  currentChapter Int      @default(1)          // 1..17 (index in the ARISE TOC)
+  startedAt      DateTime @default(now())
+  lastSessionAt  DateTime @default(now())
+  certifiedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lessons        AriseLesson[]
+
+  @@index([traineeId])
+  @@index([course])
+}
+
+model AriseLesson {
+  id             String         @id @default(cuid())
+  enrolmentId    String
+  enrolment      AriseEnrolment @relation(fields: [enrolmentId], references: [id])
+  // Day + chapter at the moment the session ran; can drift from the current
+  // enrolment values if the trainee revisits an older chapter.
+  dayNumber      Int
+  chapterNumber  Int
+  chapterTitle   String?
+  startedAt      DateTime       @default(now())
+  endedAt        DateTime?
+  // Free-form transcript + a JSON blob of the whiteboard states the AI
+  // wrote during the session. Both optional — a call that ends before the
+  // client persists them just leaves them null (audit still has the row).
+  transcript     String?
+  whiteboard     String?        // JSON: [{ ts, kind: 'text'|'diagram'|'list', ...payload }]
+  notes          String?
+  createdAt      DateTime       @default(now())
+
+  @@index([enrolmentId])
+  @@index([dayNumber])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

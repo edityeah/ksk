@@ -62,6 +62,54 @@ export const TOOLS = {
       }
     },
   },
+
+  // ── ARISE MX classroom tools ────────────────────────────────────────
+  // These write to ctx.arise, which is a set of callbacks the classroom
+  // canvas registers when it mounts (via CallProvider's voiceCtxRef).
+  // If no classroom is active, the tools silently no-op — the model
+  // will speak normally without a visible whiteboard.
+  arise_whiteboard_write: {
+    handler: async ({ kind, text, clear }, ctx) => {
+      if (!ctx?.arise?.appendBlock) return { ok: true, note: 'no_classroom_bound' }
+      const block = {
+        id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        kind, text, at: Date.now(),
+      }
+      if (clear) ctx.arise.clearBoard?.()
+      ctx.arise.appendBlock(block)
+      return { ok: true }
+    },
+  },
+  arise_show_diagram: {
+    handler: async ({ diagram_id }, ctx) => {
+      if (!ctx?.arise?.showDiagram) return { ok: true, note: 'no_classroom_bound' }
+      ctx.arise.showDiagram(diagram_id)
+      return { ok: true, diagram_id }
+    },
+  },
+  arise_mark_day_complete: {
+    handler: async ({ day_number }, ctx) => {
+      if (!ctx?.arise?.markDayComplete) return { ok: false, error: 'no_classroom_bound' }
+      try {
+        const r = await ctx.arise.markDayComplete(day_number)
+        ctx.showToast?.({ msg: `Day ${day_number} complete — moving to Day ${r?.currentDay || day_number + 1}`, type: 'success' })
+        return { ok: true, ...r }
+      } catch (e) {
+        return { ok: false, error: String(e?.message || e) }
+      }
+    },
+  },
+  arise_jump_to_chapter: {
+    handler: async ({ chapter_number }, ctx) => {
+      if (!ctx?.arise?.jumpToChapter) return { ok: false, error: 'no_classroom_bound' }
+      try {
+        const r = await ctx.arise.jumpToChapter(chapter_number)
+        return { ok: true, ...r }
+      } catch (e) {
+        return { ok: false, error: String(e?.message || e) }
+      }
+    },
+  },
 }
 
 // Dispatcher — called by realtimeVoice.js when a function_call event

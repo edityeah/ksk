@@ -255,7 +255,7 @@ export const ROLE_SUGGESTIONS = {
 }
 
 export const ROLE_CANVASES = {
-  trainee: ['skill_passport', 'course_discovery', 'career_counsellor', 'learning_assistant', 'oral_assessment', 'ocr_exam', 'mock_interview', 'jobs_marketplace', 'mentor_directory', 'mentor_profile', 'posts_feed', 'post_detail', 'placement_confirm', 'retention_checkin', 'salary_slip', 'stipend_status', 'grievance', 'notifications'],
+  trainee: ['skill_passport', 'course_discovery', 'career_counsellor', 'learning_assistant', 'arise_classroom', 'oral_assessment', 'ocr_exam', 'mock_interview', 'jobs_marketplace', 'mentor_directory', 'mentor_profile', 'posts_feed', 'post_detail', 'placement_confirm', 'retention_checkin', 'salary_slip', 'stipend_status', 'grievance', 'notifications'],
   trainer: ['attendance', 'lesson_delivery', 'quiz', 'at_risk', 'notifications', 'trainer_assessment_capture', 'trainer_assessment_view'],
   training_centre: ['tc_demand_board', 'centre_dashboard', 'batches', 'cert_pipeline', 'placement_declare', 'retention_checkin', 'inspection', 'at_risk', 'notifications'],
   training_partner: ['tp_demand_master', 'tp_rollup', 'tp_enrollment', 'tp_certification', 'tp_placement', 'tp_retention', 'tp_schemes', 'placement_declare', 'batches', 'at_risk', 'notifications'],
