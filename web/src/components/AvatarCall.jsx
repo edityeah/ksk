@@ -67,6 +67,16 @@ export default function AvatarCall({
   // dispatches.
   onBoardBlock,
   onDiagram,
+  // Called with the trainee's most recent user text on every turn.
+  // Parent can inspect it (e.g. for language detection) before the
+  // request goes out.
+  onUserMessage,
+  // Optional function called at request-build time to compute a fresh
+  // `extraSystem` string for that turn — takes precedence over the
+  // static `extraSystem` prop when provided. Lets a parent inject
+  // turn-specific directives (e.g. "reply in English because that's
+  // what the trainee just wrote").
+  getExtraSystem,
 }) {
   const { showToast, meExtra, role, refreshThreads } = useApp()
   const { setActions } = useContext(CanvasHeaderActionsContext) || {}
@@ -247,11 +257,26 @@ export default function AvatarCall({
 
   async function streamReply(userText, anamClient = null) {
     console.log('[reply] streamReply called', { text: userText.slice(0, 60), hasAnamClient: !!anamClient })
+    // Give the parent a chance to inspect the user's message (e.g. run
+    // language detection) BEFORE we assemble the request body — its
+    // getExtraSystem() call below reads whatever it decided.
+    try { onUserMessage?.(userText) } catch {}
     setThinking(true)
     setMessages(m => [...m, { role: 'user', text: userText }])
     const allMessages = [...messagesRef.current, { role: 'user', text: userText }]
     persistMessage('user', userText)
     const token = getToken()
+    // Compute turn-specific extraSystem via getExtraSystem() when the
+    // parent provides one; fall back to the static effectiveSystem.
+    let perTurnExtra = effectiveSystem
+    if (typeof getExtraSystem === 'function') {
+      try {
+        const dyn = getExtraSystem(userText)
+        if (typeof dyn === 'string' && dyn.length) {
+          perTurnExtra = [profileBlock, dyn].filter(Boolean).join('\n\n')
+        }
+      } catch (e) { console.warn('[reply] getExtraSystem threw', e) }
+    }
     const body = {
       persona,
       messages: allMessages.map(m => ({ role: m.role === 'bot' ? 'assistant' : m.role, content: m.text || '' })),
@@ -263,7 +288,7 @@ export default function AvatarCall({
       // skip the CARD_TOOLBOX prompt block, and add a "≤2 sentences" hint.
       // Cuts first-token latency by ~500-800 ms vs the default path.
       fast: (callMode === 'voice' || callMode === 'video'),
-      extraSystem: effectiveSystem || undefined,
+      extraSystem: perTurnExtra || undefined,
       role: role || undefined,                  // role-aware persona context
     }
     // Anam SDK 4.13.1: don't use createTalkMessageStream/streamMessageChunk

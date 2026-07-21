@@ -145,8 +145,13 @@ r.post('/stream', async (req, res, next) => {
       }
       const p = await buildArisePersona({ currentDay, currentChapter, traineeName })
       system = p.instructions + '\n\n' + BOARD_MARKER_INSTRUCTIONS
-      if (body.extraSystem) system += '\n\n' + body.extraSystem
+      // extraSystem (usually a language directive built client-side by
+      // AriseClassroomCanvas's getExtraSystem) MUST land at the very end
+      // of the system prompt so it wins on recency over the persona's
+      // long body — the model gives higher weight to instructions closer
+      // to the user turn.
       if (memCtx)           system += '\n\nWhat you remember about this user:\n' + memCtx
+      if (body.extraSystem) system += '\n\n---\n## FINAL OVERRIDE (obey this before anything above)\n\n' + body.extraSystem
     } else {
       system = persona.systemPrompt
       // In fast mode add a tight reply-length directive — keeps Anam lip-sync

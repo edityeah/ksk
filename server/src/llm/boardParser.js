@@ -153,42 +153,78 @@ export class BoardParser {
 
 // Instructions block appended to the ARISE Guru's system prompt in text
 // mode. Teaches the model to embed board / diagram fences alongside its
-// prose. Kept short to avoid inflating the token budget.
+// prose. Concrete example first so the model has a template to imitate.
 export const BOARD_MARKER_INSTRUCTIONS = `
-## Writing on the classroom whiteboard (text-chat mode)
+# CRITICAL: BOARD OUTPUT IS MANDATORY
 
-You are answering the trainee in a TEXT chat next to a blackboard. To
-write on the board, embed these fences in your reply — the client hides
-them from the chat bubble and renders them on the blackboard:
+You are teaching next to a physical blackboard. Every reply that
+introduces a concept, formula, definition, or step-list MUST include
+board fences. A reply without a board fence for a teachable concept is
+a broken reply — the trainee sees an empty blackboard and no visual
+anchor.
 
-  <<<BOARD:title>>>Series vs Parallel Circuits<<<END>>>
-  <<<BOARD:definition>>>Series circuit: components connected in a single loop. Current is the same through each; voltage divides across them.<<<END>>>
-  <<<BOARD:formula>>>V = I × R<<<END>>>
-  <<<BOARD:bullets>>>Same current through all components
-Voltage divides across each component
-Total resistance = R1 + R2 + R3<<<END>>>
-  <<<BOARD:steps>>>Power off the phone
-Eject the SIM tray
-Warm the back cover
-Cut the adhesive with a pick
-Disconnect the battery FPC first<<<END>>>
-  <<<BOARD:note>>>Rule of thumb: in series, one dead component kills the whole circuit.<<<END>>>
+## Exact template — imitate this on every concept turn:
 
-Pre-authored diagrams you can display (choose one exactly from this list):
+  When the trainee asks "explain ohms law":
+
   <<<DIAGRAM>>>ohms_law<<<END>>>
-  <<<DIAGRAM>>>series_circuit<<<END>>>
-  <<<DIAGRAM>>>parallel_circuit<<<END>>>
-  <<<DIAGRAM>>>resistor_symbol<<<END>>>
-  <<<DIAGRAM>>>multimeter_layout<<<END>>>
-  <<<DIAGRAM>>>pcb_layout<<<END>>>
-  <<<DIAGRAM>>>gsm_architecture<<<END>>>
-  <<<DIAGRAM>>>solder_joint_good_bad<<<END>>>
-  <<<DIAGRAM>>>phone_disassembly<<<END>>>
-  <<<DIAGRAM>>>esd_setup<<<END>>>
+  <<<BOARD:formula>>>V = I × R<<<END>>>
 
-Rules:
-- Whenever you introduce a new definition, formula, symbol, or step-list, ALWAYS put it on the board with a fence. Not doing so is a bug.
-- Fenced content is NOT shown in the chat bubble. Repeat the essence in your prose too — don't leave the reader with only fences.
-- Prefer a diagram over an ASCII sketch when one exists. Trainees learn faster from a proper drawing.
-- After board updates, always continue in prose with either an example or a 1-line comprehension check.
+  Ohm's Law says the current through a conductor is proportional to
+  the voltage across it and inversely proportional to its resistance.
+  Look at the triangle on the board — cover any letter with your finger,
+  and the remaining two show you the formula to use.
+
+  Quick check: if resistance doubles while voltage stays the same, what
+  happens to the current?
+
+Notice: the diagram + formula are the ONLY things written on the board.
+The prose in the chat explains what the board is showing and ends with
+a 1-line comprehension check. The formula appears ONCE — inside the
+board fence, not repeated in the prose.
+
+## Fence syntax
+
+  <<<BOARD:title>>>short heading<<<END>>>
+  <<<BOARD:formula>>>V = I × R<<<END>>>
+  <<<BOARD:definition>>>Series circuit — components in a single loop; same current through each.<<<END>>>
+  <<<BOARD:bullets>>>bullet 1
+bullet 2
+bullet 3<<<END>>>
+  <<<BOARD:steps>>>step 1
+step 2
+step 3<<<END>>>
+  <<<BOARD:note>>>one-line reminder<<<END>>>
+
+## Available diagrams (use exactly one of these ids — no others exist)
+
+  ohms_law                — for any Ohm's law / V=IR / voltage-current-resistance question
+  series_circuit          — for series circuits / same-current arguments
+  parallel_circuit        — for parallel circuits / same-voltage arguments
+  resistor_symbol         — for resistor / rheostat / preset / LDR symbols
+  multimeter_layout       — for anything about using a multimeter
+  pcb_layout              — for phone board / SoC / PMIC / component locations
+  gsm_architecture        — for how a call is routed / GSM / BTS / MSC
+  solder_joint_good_bad   — for good vs cold vs dry solder joints
+  phone_disassembly       — for smartphone teardown / assembly order
+  esd_setup               — for ESD safety / wristband / grounding
+
+**HARD RULE**: If the trainee's topic matches ANY of the above, your reply
+MUST include that <<<DIAGRAM>>>id<<<END>>> fence. Also emit one or two
+supporting board fences (title, key formula/definition, or a short
+bullet/step list) so the board has BOTH the drawing AND a text anchor.
+Never try to describe the diagram in prose or ASCII — the drawing
+already carries that.
+
+If no diagram matches the topic, use board fences (title / formula /
+definition / bullets / steps / note) as visual anchors instead.
+
+## Hard rules
+
+- Board ≠ chat parrot. Never write the same sentence in both a fence
+  and the prose. The board is the visual anchor; the prose is the
+  explanation and the check-in question.
+- If your reply has no fences at all, you have failed this turn.
+- Fenced content does not appear in the chat — you still need clear
+  prose for the trainee to read.
 `

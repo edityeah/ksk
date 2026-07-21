@@ -19,6 +19,7 @@ import AvatarCall from '../../components/AvatarCall.jsx'
 import { useApp } from '../../context/AppContext.jsx'
 import { useCall } from '../../context/CallProvider.jsx'
 import { api } from '../../api/client.js'
+import ChalkDiagram, { CHALK_DIAGRAM_TITLES } from './ChalkDiagrams.jsx'
 import {
   ArrowLeft, Loader2, GraduationCap, BookOpen, ChevronRight, CheckCircle2,
   X, Eraser, Sparkles, ScrollText,
@@ -44,50 +45,34 @@ const CHAPTER_TITLES = {
   17: 'Final Review',
 }
 
-// The pre-authored diagrams the teacher can request via arise_show_diagram.
-// v1 renders these as ASCII-style chalk drawings inside the whiteboard —
-// visual enough to demo the flow. Phase 2 swaps in richer SVG.
-const DIAGRAMS = {
-  ohms_law: {
-    title: "Ohm's Law",
-    body: `V = I × R\n\nV  →  Voltage    (volts)\nI  →  Current    (amperes)\nR  →  Resistance (ohms)`,
-  },
-  series_circuit: {
-    title: 'Series circuit',
-    body: `+──[R1]──[R2]──[R3]──−\n\n• same CURRENT through all\n• voltage DIVIDES across each\n• total R = R1 + R2 + R3`,
-  },
-  parallel_circuit: {
-    title: 'Parallel circuit',
-    body: `        ┌──[R1]──┐\n+ ──────┼──[R2]──┼────── −\n        └──[R3]──┘\n\n• same VOLTAGE across each\n• current DIVIDES between branches\n• 1/R_total = 1/R1 + 1/R2 + 1/R3`,
-  },
-  resistor_symbol: {
-    title: 'Resistor · symbols',
-    body: `Fixed:      ──/\\/\\/\\──\nVariable:   ──/\\/\\/──▶──   (rheostat/pot)\nPreset:     ──/\\/\\/──▼──   (trimmer)`,
-  },
-  multimeter_layout: {
-    title: 'Multimeter · layout',
-    body: `┌───────────────────┐\n│      888.8V       │  ← display\n├───────────────────┤\n│    (rotary sel)   │  ← range switch\n│  V= V~ Ω A  Diode │\n│                   │\n│  [COM]      [VΩ]  │  ← probe jacks\n│         [A]       │\n└───────────────────┘\nBlack → COM   Red → VΩ (or A for current)`,
-  },
-  pcb_layout: {
-    title: 'Smartphone PBA · top view',
-    body: `┌──────────────────────────────────┐\n│ [Camera]  [Antenna]     [Speaker]│\n│                                  │\n│  [SoC]     [PMIC]      [RAM]     │\n│                                  │\n│  [Modem]   [Audio IC]  [USB IC]  │\n│                                  │\n│ [Battery FPC]        [SIM tray]  │\n└──────────────────────────────────┘\nMost failures cluster at charging (USB IC / PMIC) and audio.`,
-  },
-  gsm_architecture: {
-    title: 'GSM · call path',
-    body: `Handset (MS) →  BTS  →  BSC  →  MSC  →  BTS  →  Handset\n                                │\n                            VLR / HLR   (subscriber database)\n                                │\n                              AuC / EIR  (auth + IMEI check)\n\nMS = mobile station · BSC = base station controller · MSC = switching centre`,
-  },
-  solder_joint_good_bad: {
-    title: 'Solder joints · good vs. bad',
-    body: `GOOD                 COLD                DRY\n\n   ▲                    ●                    ▲\n  ▲ ▲                  ● ●                  ▲ ▲\n ▲ ▲ ▲                ●   ●                ▲ ▲ ▲\n──   ──              ─     ─              ──   ──\n\nSmooth, shiny,        Dull, grainy —       Cracked, ring\nconcave              iron too cool         around lead`,
-  },
-  phone_disassembly: {
-    title: 'Smartphone · disassembly order',
-    body: `1. Power off + eject SIM\n2. Warm back cover (heat pad)\n3. Cut adhesive with pick / suction\n4. Disconnect battery FPC FIRST (ESD safety)\n5. Remove screws (log positions — different lengths)\n6. Lift PBA carefully; free antenna & display FPCs\n7. When re-assembling: fresh adhesive, then water test`,
-  },
-  esd_setup: {
-    title: 'ESD-safe bench',
-    body: `Wrist strap ─── (1 MΩ) ───┐\n                          ▼\n                    ESD mat ── ground point\n                          ▲\n         Antistatic bin / bag / apron\n\nAll same ground potential. Wristband continuity test = ≤ 20 MΩ.`,
-  },
+// Diagram registry lives in ChalkDiagrams.jsx now — one real SVG per id.
+// This canvas just references them by id via <ChalkDiagram id={...} />.
+// Titles are shared so the block header stays consistent.
+const DIAGRAM_TITLES = CHALK_DIAGRAM_TITLES
+
+// Heuristic language detector. Runs on every user turn so the ARISE Guru
+// mirrors whatever the trainee just typed / spoke. Pure ASCII English →
+// force English; anything with Devanagari or common Hindi-transliteration
+// words → Hindi/Hinglish.
+function detectLanguage(text) {
+  if (!text) return 'en'
+  // Devanagari or other Indic scripts → Hindi.
+  if (/[ऀ-ॿ]|[઀-૿]|[஀-௿]|[ಀ-೿]/.test(text)) return 'hi'
+  const lower = text.toLowerCase()
+  // Common Hinglish tell-tales.
+  const hinglishWords = [
+    ' hai', ' hain', ' kya', ' aap', ' aapko', ' mera', ' meri', ' bataiye',
+    ' samjhao', ' samajh', ' kaise', ' kyun', ' bhai', ' didi', ' seekhna',
+    ' seekhne', ' padhna', ' padhaiye', 'karna hai', 'batao', 'chahiye',
+    ' theek', ' abhi', ' phone ', ' repair', 'chaliye', 'thoda',
+  ]
+  if (hinglishWords.some(w => lower.includes(w))) return 'hi'
+  return 'en'
+}
+
+const LANGUAGE_DIRECTIVE = {
+  en: 'The trainee just wrote in ENGLISH. Reply in ENGLISH ONLY — no Hindi, no Hinglish. Technical terms stay in English (resistor, PBA, IMEI).',
+  hi: 'The trainee just wrote in Hindi / Hinglish. Reply in the SAME Hinglish register — English technical terms are fine (resistor, PBA, IMEI) but wrap them in Hindi/Hinglish sentence structure.',
 }
 
 export default function AriseClassroomCanvas() {
@@ -98,6 +83,10 @@ export default function AriseClassroomCanvas() {
   const [error, setError]       = useState('')
   const [board, setBoard]       = useState([])     // whiteboard blocks
   const [onCall, setOnCall]     = useState(false)
+  // Language of the trainee's most recent turn. Updated every time they
+  // submit a message so the next reply mirrors it. Default en so a fresh
+  // "explain X" opener in English doesn't come back as Hinglish.
+  const [replyLang, setReplyLang] = useState('en')
 
   // Load enrolment on mount.
   useEffect(() => {
@@ -121,9 +110,9 @@ export default function AriseClassroomCanvas() {
       appendBlock: (block) => setBoard(prev => [...prev, block]),
       clearBoard:  () => setBoard([]),
       showDiagram: (id) => {
-        const d = DIAGRAMS[id]
-        if (!d) return
-        setBoard(prev => [...prev, { id: `dia-${Date.now()}`, kind: 'diagram', diagramId: id, title: d.title, text: d.body, at: Date.now() }])
+        const title = DIAGRAM_TITLES[id]
+        if (!title) return
+        setBoard(prev => [...prev, { id: `dia-${Date.now()}`, kind: 'diagram', diagramId: id, title, at: Date.now() }])
       },
       markDayComplete: async (dayNumber) => {
         const day = dayNumber ?? stateRef.current.progress?.currentDay ?? 1
@@ -291,9 +280,25 @@ export default function AriseClassroomCanvas() {
               // text and voice both draw on the blackboard.
               onBoardBlock={(block) => setBoard(prev => [...prev, block])}
               onDiagram={(id) => {
-                const d = DIAGRAMS[id]
-                if (!d) return
-                setBoard(prev => [...prev, { id: `dia-${Date.now()}`, kind: 'diagram', diagramId: id, title: d.title, text: d.body, at: Date.now() }])
+                const title = DIAGRAM_TITLES[id]
+                if (!title) return
+                setBoard(prev => [...prev, { id: `dia-${Date.now()}`, kind: 'diagram', diagramId: id, title, at: Date.now() }])
+              }}
+              // Detect the language of every trainee turn so the reply
+              // mirrors it. Prevents Hinglish-by-default when the trainee
+              // wrote in pure English.
+              onUserMessage={(text) => setReplyLang(detectLanguage(text))}
+              // Turn-specific system prompt additions. Two parts:
+              //   1. hard language directive derived from the trainee's
+              //      just-typed message
+              //   2. a differentiation rule so the whiteboard and the
+              //      chat don't parrot each other verbatim
+              getExtraSystem={(text) => {
+                const lang = detectLanguage(text)
+                return [
+                  LANGUAGE_DIRECTIVE[lang],
+                  'BOARD ≠ CHAT: the blackboard holds the visual anchor only — a title, a formula, a diagram, or a short list. The chat holds the EXPLANATION and a comprehension check. NEVER copy the same sentence into both. Whenever a diagram exists for the concept, use <<<DIAGRAM>>>id<<<END>>> — do not attempt to describe the diagram in prose or ASCII.',
+                ].join('\n\n')
               }}
             />
           </div>
@@ -346,8 +351,8 @@ function ChalkBlock({ block }) {
   if (block.kind === 'diagram') {
     return (
       <div className="bg-emerald-100/5 border border-emerald-100/10 rounded-lg p-3">
-        <div style={{ ...chalk, fontSize: 18 }} className="text-amber-200 mb-1">{block.title}</div>
-        <pre className="font-mono text-[13px] leading-[1.5] text-emerald-100/90 whitespace-pre-wrap">{block.text}</pre>
+        <div style={{ ...chalk, fontSize: 18 }} className="text-amber-200 mb-2">{block.title}</div>
+        <ChalkDiagram id={block.diagramId} />
       </div>
     )
   }
