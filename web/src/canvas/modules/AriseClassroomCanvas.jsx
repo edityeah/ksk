@@ -278,14 +278,23 @@ export default function AriseClassroomCanvas() {
             <AvatarCall
               persona="arise_mx_teacher"
               title="ARISE Guru"
-              intro={`Chapter ${progress.currentChapter}: ${chapterTitle}. Voice se puchhiye — Guru ji whiteboard par likh dega.`}
+              intro={`Chapter ${progress.currentChapter}: ${chapterTitle}. Voice se puchhiye — ya chat mein type kariye. Dono taraf se board par likh dega.`}
               suggestions={[
                 'Aaj kya seekhne wale hain?',
                 'Series circuit aur parallel circuit ka difference batao',
                 'Multimeter kaise use karte hain?',
               ]}
               onCallStateChange={(s) => setOnCall(s !== 'idle')}
-              onCallEnded={() => {}}
+              // ARISE Guru (text-chat mode) embeds board/diagram fences in
+              // its stream. These bridges feed those events into the
+              // same whiteboard state that voice-tool dispatches use, so
+              // text and voice both draw on the blackboard.
+              onBoardBlock={(block) => setBoard(prev => [...prev, block])}
+              onDiagram={(id) => {
+                const d = DIAGRAMS[id]
+                if (!d) return
+                setBoard(prev => [...prev, { id: `dia-${Date.now()}`, kind: 'diagram', diagramId: id, title: d.title, text: d.body, at: Date.now() }])
+              }}
             />
           </div>
         </div>

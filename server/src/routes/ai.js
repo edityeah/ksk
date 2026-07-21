@@ -17,8 +17,11 @@ import { openai } from '../llm/openai.js'
 import { getPersona } from '../llm/anam.js'
 import { ensureThread, addMessage, getContext } from '../llm/zep.js'
 import { CardParser } from '../llm/cardParser.js'
+import { BoardParser, BOARD_MARKER_INSTRUCTIONS } from '../llm/boardParser.js'
 import { CARD_TOOLBOX } from '../llm/cardPrompts.js'
 import { buildRoleContext } from '../llm/roleContext.js'
+import { buildArisePersona } from '../voice/arisePersona.js'
+import { prisma } from '../db.js'
 
 const r = Router()
 r.use(requireAuth)
@@ -120,24 +123,50 @@ r.post('/stream', async (req, res, next) => {
       : await ensureThread(req.user.id, body.persona, { firstName: req.user.name?.split(' ')[0] }).catch(() => null)
     const memCtx = (!fast && threadId) ? (await getContext(threadId).catch(() => '')) : ''
 
-    let system = persona.systemPrompt
-    // In fast mode add a tight reply-length directive — keeps Anam lip-sync
-    // tolerable and shaves OpenAI generation time.
-    if (fast) {
-      system += '\n\nVOICE/VIDEO MODE: Reply in ≤2 short sentences. No bullet lists, no headers, no markdown. Plain conversational English (or whichever language the user spoke).'
+    let system
+    let ariseMode = false
+    // ── ARISE MX teacher persona (text chat) ─────────────────────────────
+    // Uses buildArisePersona() so the system prompt carries the current
+    // chapter's RAG chunks + the ARISE Guru voice. Skips the card toolbox
+    // (which is Saathi-specific) and adds board-marker instructions so the
+    // model can write on the classroom blackboard from text mode.
+    if (body.persona === 'arise_mx_teacher') {
+      ariseMode = true
+      let currentDay = 1, currentChapter = 1, traineeName = req.user?.name || 'trainee'
+      if (req.user?.role === 'trainee') {
+        try {
+          const trainee = await prisma.trainee.findUnique({ where: { userId: req.user.id } })
+          if (trainee) {
+            traineeName = trainee.name
+            const en = await prisma.ariseEnrolment.findUnique({ where: { traineeId: trainee.id } })
+            if (en) { currentDay = en.currentDay; currentChapter = en.currentChapter }
+          }
+        } catch (e) { console.warn('[ai/stream] arise enrolment lookup failed', e?.message) }
+      }
+      const p = await buildArisePersona({ currentDay, currentChapter, traineeName })
+      system = p.instructions + '\n\n' + BOARD_MARKER_INSTRUCTIONS
+      if (body.extraSystem) system += '\n\n' + body.extraSystem
+      if (memCtx)           system += '\n\nWhat you remember about this user:\n' + memCtx
+    } else {
+      system = persona.systemPrompt
+      // In fast mode add a tight reply-length directive — keeps Anam lip-sync
+      // tolerable and shaves OpenAI generation time.
+      if (fast) {
+        system += '\n\nVOICE/VIDEO MODE: Reply in ≤2 short sentences. No bullet lists, no headers, no markdown. Plain conversational English (or whichever language the user spoke).'
+      }
+      // Role context: when Saathi (general persona) is talking to a non-trainee
+      // role, append role-specific framing + a heavy data pack (e.g. NSDC Academy
+      // numbers for nsdc_officer) so the agent answers like an analyst with real
+      // figures and emits chart cards.
+      const roleAddendum = buildRoleContext({ persona: body.persona, role: body.role })
+      if (roleAddendum) system += '\n\n' + roleAddendum
+      // Card toolbox — tells the LLM when/how to emit <<<KSKCARD>>>...<<<END>>>
+      // fences. Skipped in fast mode (cards bloat the system prompt by ~3KB and
+      // the agent is speaking, not drawing UI).
+      if (!fast) system += '\n\n' + CARD_TOOLBOX
+      if (body.extraSystem) system += '\n\nAdditional context:\n' + body.extraSystem
+      if (memCtx)           system += '\n\nWhat you remember about this user:\n' + memCtx
     }
-    // Role context: when Saathi (general persona) is talking to a non-trainee
-    // role, append role-specific framing + a heavy data pack (e.g. NSDC Academy
-    // numbers for nsdc_officer) so the agent answers like an analyst with real
-    // figures and emits chart cards.
-    const roleAddendum = buildRoleContext({ persona: body.persona, role: body.role })
-    if (roleAddendum) system += '\n\n' + roleAddendum
-    // Card toolbox — tells the LLM when/how to emit <<<KSKCARD>>>...<<<END>>>
-    // fences. Skipped in fast mode (cards bloat the system prompt by ~3KB and
-    // the agent is speaking, not drawing UI).
-    if (!fast) system += '\n\n' + CARD_TOOLBOX
-    if (body.extraSystem) system += '\n\nAdditional context:\n' + body.extraSystem
-    if (memCtx)           system += '\n\nWhat you remember about this user:\n' + memCtx
 
     // Save the latest user message — fire-and-forget so Zep latency / errors
     // never block the response path.
@@ -153,9 +182,14 @@ r.post('/stream', async (req, res, next) => {
 
     let fullText = ''
     const citations = []
-    // Streaming card parser: pulls <<<KSKCARD>>>...<<<END>>> blocks out of the
-    // raw LLM text and emits them as `card` SSE events. Everything outside
-    // those fences passes through to the client as normal `delta` events.
+    // Two streaming parsers chained:
+    //   raw LLM text → BoardParser (peels off <<<BOARD:kind>>>…<<<END>>>
+    //   and <<<DIAGRAM>>>id<<<END>>> fences into `board`/`diagram` SSE
+    //   events for the ARISE classroom) → CardParser (peels off
+    //   <<<KSKCARD>>>…<<<END>>> JSON fences into `card` events for
+    //   Saathi-style rich UI) → final `delta` events for the chat bubble.
+    // Only ARISE persona sessions actually receive board fences, but
+    // running the parser is cheap when the stream contains none.
     const cardParser = new CardParser({
       onText: (text) => {
         fullText += text
@@ -164,6 +198,11 @@ r.post('/stream', async (req, res, next) => {
       onCard: (card) => {
         res.write(`data: ${JSON.stringify({ card })}\n\n`)
       },
+    })
+    const boardParser = new BoardParser({
+      onText:    (text) => cardParser.feed(text),
+      onBoard:   (block) => res.write(`data: ${JSON.stringify({ board: block })}\n\n`),
+      onDiagram: (d)     => res.write(`data: ${JSON.stringify({ diagram: d })}\n\n`),
     })
     const lastUserText = lastUser?.content?.slice(0, 120) || ''
     console.log(`[ai/stream] user=${req.user?.id} role=${body.role || '-'} persona=${body.persona} webSearch=${useWebSearch} systemLen=${system.length} msg="${lastUserText}"`)
@@ -174,7 +213,10 @@ r.post('/stream', async (req, res, next) => {
         messages: body.messages.filter(m => m.role !== 'system'),
         useWebSearch,
         fast,
-        onChunk: (delta) => { cardParser.feed(delta) },
+        // Feed through the board parser first (peels board/diagram
+        // fences) and then it forwards clean text to the card parser
+        // (peels card fences) and finally out as delta events.
+        onChunk: (delta) => { (ariseMode ? boardParser : cardParser).feed(delta) },
         onCitation: (c) => {
           if (c.url) {
             citations.push({ url: c.url, title: c.title || c.url })
@@ -182,6 +224,7 @@ r.post('/stream', async (req, res, next) => {
           }
         },
       })
+      if (ariseMode) boardParser.flush()
       cardParser.flush()
       console.log(`[ai/stream] ok in ${Date.now() - t0}ms · ${fullText.length} chars · ${citations.length} citations`)
     } catch (e) {

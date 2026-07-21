@@ -54,7 +54,20 @@ import { CanvasHeaderActionsContext } from '../canvas/CanvasHeaderActions.js'
 import ChatBubble from './ChatBubble.jsx'
 import CardRenderer from './cards/CardRenderer.jsx'
 
-export default function AvatarCall({ persona, title, intro, useWebSearch, extraSystem, suggestions = [], quickAsks = [], pendingPrompt, threadId: initialThreadId, onCallStateChange }) {
+export default function AvatarCall({
+  persona, title, intro, useWebSearch, extraSystem,
+  suggestions = [], quickAsks = [], pendingPrompt,
+  threadId: initialThreadId,
+  onCallStateChange,
+  // ARISE-classroom-specific hooks. When the ai/stream backend detects
+  // persona=arise_mx_teacher it emits `board` and `diagram` SSE events
+  // (parsed out of the streaming text via BoardParser). Pass these
+  // callbacks from AriseClassroomCanvas so the blackboard updates in
+  // real time from text-chat replies too, not only from voice-tool
+  // dispatches.
+  onBoardBlock,
+  onDiagram,
+}) {
   const { showToast, meExtra, role, refreshThreads } = useApp()
   const { setActions } = useContext(CanvasHeaderActionsContext) || {}
   const threadIdRef = useRef(initialThreadId || null)        // persisted thread id (server)
@@ -302,6 +315,15 @@ export default function AvatarCall({ persona, title, intro, useWebSearch, extraS
             /* Anam audio is sent once at p.done — see comment above. */
           }
           if (p.citation?.url) citations.push(p.citation)
+          // Board events — ARISE classroom persona embeds
+          // <<<BOARD:kind>>>...<<<END>>> fences that the server peels
+          // off. Dispatch to the classroom's whiteboard state.
+          if (p.board && typeof p.board === 'object' && p.board.kind && p.board.text) {
+            try { onBoardBlock?.({ ...p.board, id: `sse-${Date.now()}-${Math.floor(Math.random() * 1000)}`, at: Date.now() }) } catch {}
+          }
+          if (p.diagram && typeof p.diagram === 'object' && p.diagram.id) {
+            try { onDiagram?.(p.diagram.id) } catch {}
+          }
           // Card events from the server's card parser — append to the
           // current assistant bubble's `cards` list so ChatBubble can render
           // the rich component below the text.
