@@ -20,11 +20,27 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { RealtimeVoice } from '../utils/realtimeVoice.js'
 import { loadAnam } from '../utils/anamSdk.js'
 import { api } from '../api/client.js'
+import { useApp } from './AppContext.jsx'
+import { handleVoiceToolCall } from '../utils/voiceTools.js'
 
 const CallCtx = createContext(null)
 export const useCall = () => useContext(CallCtx)
 
 export function CallProvider({ children }) {
+  // Voice-tool bindings — we need to reach openCanvas / showToast from
+  // inside RealtimeVoice's tool-call callback. AppProvider wraps this
+  // provider (see main.jsx → App.jsx), so useApp() is safe here.
+  //
+  // A ref keeps the RealtimeVoice callback stable across renders: the
+  // voice instance is constructed once per call, but the underlying
+  // openCanvas function re-identifies whenever AppContext memoises its
+  // value object. Reading through the ref means the newest handler is
+  // always used at dispatch time without re-creating the RTC session.
+  const app = useApp()
+  const voiceCtxRef = useRef({ openCanvas: null, showToast: null })
+  voiceCtxRef.current.openCanvas = app?.openCanvas || null
+  voiceCtxRef.current.showToast  = app?.showToast  || null
+
   // Single source of truth for any in-progress call.
   // null = no call. Shape: { persona, mode, state, muted, screenSharing, threadId, startedAt, error?, title? }
   const [activeCall, setActiveCall] = useState(null)
@@ -93,6 +109,15 @@ export function CallProvider({ children }) {
         if (full?.trim()) persistMessage('bot', full)
       },
       onError: (err) => patchCall({ state: 'error', error: err?.message || String(err) }),
+      // Voice → UI orchestration. When the trainee says "I want to
+      // learn / practice interview / find jobs / do career counseling",
+      // the model calls open_canvas(canvas_id) — this fires the same
+      // openCanvas() that a tap would. See web/src/utils/voiceTools.js
+      // for the canvas catalogue and server/src/voice/tools.js for the
+      // persona briefing that teaches the model when to call it.
+      onToolCall: async ({ name, args }) => {
+        return await handleVoiceToolCall(name, args, voiceCtxRef.current)
+      },
     })
     realtimeRef.current = rt
     try { await rt.connect() } catch { /* surfaced via onError */ }

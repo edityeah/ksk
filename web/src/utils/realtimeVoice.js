@@ -37,6 +37,13 @@ export class RealtimeVoice {
     onAssistantDone,
     onState,
     onError,
+    // Called when the model completes a function-call. Signature:
+    //   onToolCall({ callId, name, args }) → any (serialisable)
+    // The return value is JSON-encoded and posted back to the model as
+    // a function_call_output item, followed by a response.create so
+    // the model finishes speaking. If the callback throws or returns
+    // undefined, we post { ok: true } as a neutral acknowledgement.
+    onToolCall,
   } = {}) {
     this.persona = persona
     this.extraSystem = extraSystem
@@ -47,12 +54,16 @@ export class RealtimeVoice {
     this.onAssistantDone = onAssistantDone
     this.onState = onState
     this.onError = onError
+    this.onToolCall = onToolCall
 
     this.pc = null              // RTCPeerConnection
     this.dc = null              // RTCDataChannel for control + transcript events
     this.localStream = null     // user mic MediaStream
     this.audioEl = null         // hidden <audio> for assistant playback
     this.assistantBuffer = ''   // current turn's accumulated assistant text
+    // OpenAI streams function-call arguments in deltas, keyed by call_id.
+    // We buffer per-call until the corresponding .done event arrives.
+    this.toolArgBuffers = new Map()
     this.closed = false
   }
 
@@ -190,12 +201,72 @@ export class RealtimeVoice {
         this.onError?.(new Error(e.error?.message || 'realtime_error'))
         break
       }
+      // ── Function-call plumbing ──────────────────────────────────────
+      // Arguments arrive as a stream of deltas keyed by call_id; when
+      // the model finishes emitting them, a .done event fires with the
+      // final JSON (also mirrored in `arguments`).
+      case 'response.function_call_arguments.delta': {
+        if (e.call_id && e.delta != null) {
+          const prev = this.toolArgBuffers.get(e.call_id) || ''
+          this.toolArgBuffers.set(e.call_id, prev + e.delta)
+        }
+        break
+      }
+      case 'response.function_call_arguments.done': {
+        const callId = e.call_id
+        const name   = e.name
+        const argsRaw = (e.arguments != null && e.arguments !== '')
+          ? e.arguments
+          : (this.toolArgBuffers.get(callId) || '{}')
+        this.toolArgBuffers.delete(callId)
+        let args
+        try { args = JSON.parse(argsRaw) }
+        catch (err) {
+          console.warn('[realtime] malformed tool args for', name, '— skipping dispatch', err)
+          break
+        }
+        this._dispatchToolCall({ callId, name, args }).catch(err =>
+          console.warn('[realtime] tool dispatch threw', err))
+        break
+      }
       default:
         // Many other events flow by (rate.limits.updated, session.updated, etc).
         // Logging at debug level only.
         // console.debug('[realtime]', e.type)
         break
     }
+  }
+
+  // Dispatch a completed function-call to the caller's onToolCall
+  // callback, then post the result back into the data channel as a
+  // function_call_output + response.create so the model can finish its
+  // spoken turn once it sees the tool succeeded.
+  async _dispatchToolCall({ callId, name, args }) {
+    let result
+    try {
+      result = this.onToolCall
+        ? await this.onToolCall({ callId, name, args })
+        : { ok: false, error: 'no tool handler on client' }
+    } catch (err) {
+      result = { ok: false, error: String(err?.message || err) }
+    }
+    // Fall back to a neutral ack so the model doesn't stall waiting
+    // for output that never arrives.
+    if (result === undefined || result === null) result = { ok: true }
+    let output
+    try { output = JSON.stringify(result) }
+    catch { output = JSON.stringify({ ok: false, error: 'result not serialisable' }) }
+
+    if (!this.dc || this.dc.readyState !== 'open') {
+      console.warn('[realtime] tool result not delivered — data channel not open', { name, callId })
+      return
+    }
+    this.dc.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: { type: 'function_call_output', call_id: callId, output },
+    }))
+    // Ask the model to continue speaking now that it has the result.
+    this.dc.send(JSON.stringify({ type: 'response.create' }))
   }
 
   // Inject an additional user message (e.g. when caller types a prompt while

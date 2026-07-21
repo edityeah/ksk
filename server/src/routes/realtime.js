@@ -16,6 +16,7 @@ import { z } from 'zod'
 import rateLimit from 'express-rate-limit'
 import { requireAuth } from '../auth/middleware.js'
 import { buildRoleContext } from '../llm/roleContext.js'
+import { toOpenAIToolDefs, toPersonaBriefing } from '../voice/tools.js'
 
 const r = Router()
 r.use(requireAuth)
@@ -122,6 +123,13 @@ r.post('/session', async (req, res, next) => {
     if (roleAddendum) parts.push(roleAddendum)
     parts.push(KB_DIRECTIVE)
     parts.push(LANGUAGE_RULE)
+    // Voice-tool routing table appended AFTER the language rule so the
+    // model reads it late (near the end of the system prompt, higher
+    // recency weight). Only applies to the trainee-facing personas —
+    // other roles' voice sessions won't have canvas-open intents worth
+    // routing. For now we always append; if it starts confusing
+    // non-trainee sessions, gate on body.role === 'trainee'.
+    parts.push(toPersonaBriefing())
     if (body.extraSystem) parts.push(body.extraSystem)
     const instructions = parts.join('\n\n')
 
@@ -134,6 +142,13 @@ r.post('/session', async (req, res, next) => {
       type: 'realtime',
       model: MODEL,
       instructions,
+      // Tools baked into the session at mint time. Client-side handlers
+      // live in web/src/utils/voiceTools.js; dispatch happens in
+      // web/src/utils/realtimeVoice.js when a response.function_call_
+      // arguments.done event arrives on the data channel.
+      tools: toOpenAIToolDefs(),
+      // tool_choice: 'auto' is Realtime's default — the model decides
+      // when to call a tool vs. just respond. Leaving it implicit.
       output_modalities: ['audio'],
       audio: {
         input: {
