@@ -33,6 +33,7 @@ import ocrRoutes from './routes/ocr.js'
 import epfoRoutes from './routes/epfo.js'
 import mentorRoutes from './routes/mentors.js'
 import postRoutes from './routes/posts.js'
+import trainerAssessmentRoutes from './routes/trainerAssessments.js'
 
 const app = express()
 
@@ -104,6 +105,7 @@ app.use('/api/ocr', ocrRoutes)
 app.use('/api/epfo', epfoRoutes)
 app.use('/api/mentors', mentorRoutes)
 app.use('/api/posts', postRoutes)
+app.use('/api/trainer-assessments', trainerAssessmentRoutes)
 
 // ─── Production: also serve the built Vite SPA from /web/dist ────────────────
 // In production (Render), the same Express service hosts both /api/* and the

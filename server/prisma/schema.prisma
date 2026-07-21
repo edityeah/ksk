@@ -36,6 +36,7 @@ model User {
   ownedEmployer      Employer?        @relation("employerAdmin")
   trainerBatches     Batch[]          @relation("trainerOfBatch")
   assessmentsDone    Assessment[]     @relation("assessorOfAssessment")
+  trainerAssessments TrainerAssessment[] @relation("trainerOfAssessment")
   placementsDeclared Placement[]      @relation("tpDeclarant")
   notifications      Notification[]
   chatThreads        ChatThread[]
@@ -173,6 +174,7 @@ model Batch {
   state      String         @default("scheduled") // scheduled | running | completed | cancelled
   trainees   Trainee[]
   attendance Attendance[]
+  trainerAssessments TrainerAssessment[]
   createdAt  DateTime       @default(now())
 }
 
@@ -213,6 +215,7 @@ model Trainee {
 
   attendance        Attendance[]
   assessments       Assessment[]
+  trainerAssessments TrainerAssessment[]
   certificates      Certificate[]
   placements        Placement[]
   stipends          Stipend[]
@@ -610,6 +613,55 @@ model Post {
   @@index([authorId])
   @@index([createdAt])
   @@index([kind])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRAINER ASSESSMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+// In-class assessments scored by the trainer via OCR of a paper answer sheet
+// or manual entry. Distinct from the formal `Assessment` model above, which
+// tracks SSC-run certification assessments run by an assessor.
+//
+// Flow (typical):
+//   1. Trainer picks a student from their batch roster.
+//   2. Uploads or clicks a photo of the marked answer sheet.
+//   3. Server sends the image to OpenAI Vision, which returns structured
+//      { student_name?, total_marks, scored_marks, per_question[]?, confidence }.
+//   4. Trainer reviews / edits + saves. `scanImage` is stored so we can
+//      re-OCR or audit later.
+//
+// The View dashboard reads back per-batch summaries + per-student trends.
+
+model TrainerAssessment {
+  id            String    @id @default(cuid())
+  batchId       String
+  batch         Batch     @relation(fields: [batchId], references: [id])
+  traineeId     String
+  trainee       Trainee   @relation(fields: [traineeId], references: [id])
+  trainerId     String    // FK to User (the trainer who scanned)
+  trainer       User      @relation("trainerOfAssessment", fields: [trainerId], references: [id])
+
+  title         String    // "Chapter 3 – Retail SOP quiz"
+  subject       String?   // free-form topic tag
+  totalMarks    Int
+  scoredMarks   Int
+  percentage    Float     // scored / total * 100, computed server-side
+  grade         String?   // A / B+ / C / … or null
+
+  // OCR provenance. All optional so manually-entered rows still fit.
+  method        String    @default("scan")  // 'scan' | 'manual'
+  scanImage     String?                     // data URL (jpeg/png), capped in the route
+  ocrConfidence Float?                      // 0..1 as returned by the model
+  ocrExtract    String?                     // JSON blob of the raw model output
+  notes         String?                     // trainer's free-text comment
+
+  conductedAt   DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+
+  @@index([batchId])
+  @@index([traineeId])
+  @@index([trainerId])
+  @@index([conductedAt])
 }
 
 model OtpCode {

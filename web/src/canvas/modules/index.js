@@ -45,6 +45,9 @@ import MentorDirectoryCanvas from './MentorDirectoryCanvas.jsx'
 import MentorProfileCanvas from './MentorProfileCanvas.jsx'
 import PostsFeedCanvas from './PostsFeedCanvas.jsx'
 import PostDetailCanvas from './PostDetailCanvas.jsx'
+// Trainer assessment scanner
+import TrainerAssessmentCaptureCanvas from './TrainerAssessmentCaptureCanvas.jsx'
+import TrainerAssessmentViewCanvas from './TrainerAssessmentViewCanvas.jsx'
 import GenericCanvas from './GenericCanvas.jsx'
 
 export const CANVAS_MODULES = {
@@ -100,6 +103,10 @@ export const CANVAS_MODULES = {
   mentor_profile:       MentorProfileCanvas,
   posts_feed:           PostsFeedCanvas,
   post_detail:          PostDetailCanvas,
+
+  // Trainer assessment scanner
+  trainer_assessment_capture: TrainerAssessmentCaptureCanvas,
+  trainer_assessment_view:    TrainerAssessmentViewCanvas,
 
   // Generic placeholder for any type not yet built — renders a clean "coming next" page
   // Used for: career_counsellor, learning_assistant, oral_assessment, ocr_exam, mock_interview,
@@ -163,6 +170,10 @@ const META = {
   mentor_profile:       { title: 'Mentor profile',       subtitle: 'Bio · subscribers · recent posts',              icon: '🧑‍🏫' },
   posts_feed:           { title: 'Community Posts',      subtitle: 'Updates from learners, centres, partners, mentors', icon: '📝' },
   post_detail:          { title: 'Post',                 subtitle: 'Full post view',                                icon: '📝' },
+
+  // Trainer assessment scanner
+  trainer_assessment_capture: { title: 'Scan an assessment',    subtitle: 'OCR the marked paper into a score',                    icon: '📷' },
+  trainer_assessment_view:    { title: 'Assessment dashboard',  subtitle: 'All scores you\'ve captured · averages · trends',     icon: '📊' },
 }
 
 export function getCanvasMeta(type) {

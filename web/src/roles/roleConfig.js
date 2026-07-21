@@ -79,15 +79,17 @@ export const ROLE_BOTS = {
     { id: 'updates',         name: 'Updates & Alerts',  desc: 'Scheme announcements, deadlines, reminders',            icon: '🔔', tone: 'indigo',  canvas: 'notifications',     section: 'employment' },
   ],
   trainer: [
-    { id: 'attendance', name: 'Mark Attendance',    desc: 'Today\'s batch attendance with maker-checker',        icon: '🗓️', tone: 'amber',   canvas: 'attendance' },
-    { id: 'lesson',     name: 'Today\'s Lesson',    desc: 'Lesson plan, materials, learning outcomes',           icon: '📝', tone: 'indigo',  canvas: 'lesson_delivery' },
-    { id: 'quiz',       name: 'Quiz Builder',       desc: 'Create a quick quiz for your batch',                  icon: '❓', tone: 'fuchsia', canvas: 'quiz' },
-    { id: 'at_risk',    name: 'At-Risk Trainees',   desc: 'Trainees by attendance, scores and retention risk',   icon: '⚠️', tone: 'rose',    canvas: 'at_risk' },
-    { id: 'batches',    name: 'My Batches',         desc: 'Active + planned batches and rosters',                icon: '📚', tone: 'emerald', canvas: 'batches' },
-    { id: 'curriculum', name: 'Curriculum',         desc: 'Job-role QPs, NOS modules, training content',         icon: '📖', tone: 'teal',    canvas: 'lesson_delivery' },
-    { id: 'assess_help',name: 'Assessment Prep',    desc: 'Prep your batch for the upcoming assessment',         icon: '🎓', tone: 'sky',     canvas: 'at_risk' },
-    { id: 'parent',     name: 'Parent Outreach',    desc: 'Send updates to parents of school-leaver trainees',   icon: '👨‍👩‍👦', tone: 'violet', canvas: 'notifications' },
-    { id: 'updates',    name: 'Updates & Alerts',   desc: 'Scheme changes, broadcasts, reminders',               icon: '🔔', tone: 'pink',    canvas: 'notifications' },
+    { id: 'attendance',       name: 'Mark Attendance',      desc: 'Today\'s batch attendance with maker-checker',      icon: '🗓️', tone: 'amber',   canvas: 'attendance' },
+    { id: 'lesson',           name: 'Today\'s Lesson',      desc: 'Lesson plan, materials, learning outcomes',         icon: '📝', tone: 'indigo',  canvas: 'lesson_delivery' },
+    { id: 'quiz',             name: 'Quiz Builder',         desc: 'Create a quick quiz for your batch',                icon: '❓', tone: 'fuchsia', canvas: 'quiz' },
+    { id: 'assess_capture',   name: 'Scan Assessment',      desc: 'OCR a marked answer sheet into a score',            icon: '📷', tone: 'amber',   canvas: 'trainer_assessment_capture' },
+    { id: 'assess_view',      name: 'Assessment Dashboard', desc: 'Averages, grade bands, per-student trends',         icon: '📊', tone: 'emerald', canvas: 'trainer_assessment_view' },
+    { id: 'at_risk',          name: 'At-Risk Trainees',     desc: 'Trainees by attendance, scores and retention risk', icon: '⚠️', tone: 'rose',    canvas: 'at_risk' },
+    { id: 'batches',          name: 'My Batches',           desc: 'Active + planned batches and rosters',              icon: '📚', tone: 'emerald', canvas: 'batches' },
+    { id: 'curriculum',       name: 'Curriculum',           desc: 'Job-role QPs, NOS modules, training content',       icon: '📖', tone: 'teal',    canvas: 'lesson_delivery' },
+    { id: 'assess_help',      name: 'Assessment Prep',      desc: 'Prep your batch for the upcoming SSC assessment',   icon: '🎓', tone: 'sky',     canvas: 'at_risk' },
+    { id: 'parent',           name: 'Parent Outreach',      desc: 'Send updates to parents of school-leaver trainees', icon: '👨‍👩‍👦', tone: 'violet', canvas: 'notifications' },
+    { id: 'updates',          name: 'Updates & Alerts',     desc: 'Scheme changes, broadcasts, reminders',             icon: '🔔', tone: 'pink',    canvas: 'notifications' },
   ],
   training_centre: [
     // ── Methodology (TC owns the daily signal generation)
@@ -254,7 +256,7 @@ export const ROLE_SUGGESTIONS = {
 
 export const ROLE_CANVASES = {
   trainee: ['skill_passport', 'course_discovery', 'career_counsellor', 'learning_assistant', 'oral_assessment', 'ocr_exam', 'mock_interview', 'jobs_marketplace', 'mentor_directory', 'mentor_profile', 'posts_feed', 'post_detail', 'placement_confirm', 'retention_checkin', 'salary_slip', 'stipend_status', 'grievance', 'notifications'],
-  trainer: ['attendance', 'lesson_delivery', 'quiz', 'at_risk', 'notifications'],
+  trainer: ['attendance', 'lesson_delivery', 'quiz', 'at_risk', 'notifications', 'trainer_assessment_capture', 'trainer_assessment_view'],
   training_centre: ['tc_demand_board', 'centre_dashboard', 'batches', 'cert_pipeline', 'placement_declare', 'retention_checkin', 'inspection', 'at_risk', 'notifications'],
   training_partner: ['tp_demand_master', 'tp_rollup', 'tp_enrollment', 'tp_certification', 'tp_placement', 'tp_retention', 'tp_schemes', 'placement_declare', 'batches', 'at_risk', 'notifications'],
   assessor: ['assessment_queue', 'live_assessment', 'notifications'],
