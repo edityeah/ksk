@@ -11,6 +11,9 @@ try {
     const u = new URL(raw)
     if (/^dpg-[a-z0-9]+-a$/i.test(u.hostname)) {
       u.hostname = `${u.hostname}.singapore-postgres.render.com`
+      // Render's public Postgres endpoint requires TLS; the internal one
+      // didn't. Enforce sslmode=require if the URL doesn't already say so.
+      if (!u.searchParams.has('sslmode')) u.searchParams.set('sslmode', 'require')
       process.env.DATABASE_URL = u.toString()
       console.log('[db] rewrote DATABASE_URL host →', u.hostname)
     }
