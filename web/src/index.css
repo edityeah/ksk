@@ -10,7 +10,7 @@ body { font-family: 'Inter', 'Noto Sans Devanagari', system-ui, sans-serif; }
 *::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.18); border-radius: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
 
-/* SwiftChat-style mobile frame for chat-first actors */
+/* Mobile frame for chat-first actors */
 .mobile-frame { max-width: 420px; margin: 0 auto; min-height: 100vh; box-shadow: 0 0 24px rgba(15, 23, 42, 0.08); background: white; }
 @media (min-width: 768px) {
   .mobile-frame { border-radius: 20px; margin-top: 12px; margin-bottom: 12px; min-height: calc(100vh - 24px); }

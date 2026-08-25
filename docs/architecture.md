@@ -4,9 +4,9 @@ _Last updated: 2026-05-12_
 
 ## 1. Vision
 
-KSK (Kaushal Samiksha Kendra) is a national skilling Monitoring & Evaluation command centre running on SwiftChat. Forked from the SwiftChat v3 VSK Gujarat prototype, retargeted to NSDC / MSDE.
+KSK (Kaushal Samiksha Kendra) is a national skilling Monitoring & Evaluation command centre running on the KSK platform. Retargeted to NSDC / MSDE.
 
-The thesis: **maker-checker for every record.** No single actor controls a complete record. Trainee, employer, training partner each confirm independently inside SwiftChat. Every consequential data point (enrolment, attendance, certification, placement, retention) requires at least two independent actors to confirm before it is marked verified.
+The thesis: **maker-checker for every record.** No single actor controls a complete record. Trainee, employer, training partner each confirm independently inside KSK. Every consequential data point (enrolment, attendance, certification, placement, retention) requires at least two independent actors to confirm before it is marked verified.
 
 ## 2. Stack
 
@@ -93,12 +93,12 @@ Core entities:
 - **SalarySlip** — id, placement (FK), month, employerName, grossSalary, pfNumber, fileUrl, ocrExtract (JSON)
 - **Employer** — id, name, type (formal/informal), pincode, sector (FK), epfo, esic
 - **Stipend** — id, trainee (FK), amount, scheme (FK), month, disbursalStatus, utr, failureReason, retryCount
-- **Notification** — standard SwiftChat shape (see notifications section)
-- **ChatMessage**, **ChatThread** — standard SwiftChat shape
+- **Notification** — standard notification shape (see notifications section)
+- **ChatMessage**, **ChatThread** — standard notification shape
 
 ## 8. NLP / AI layer
 
-Direct fork of SwiftChat's pipeline. Pieces:
+Streaming pipeline pieces:
 
 - `actionRegistry.js` — `OPEN_SKILL_PASSPORT`, `OPEN_PLACEMENT_VERIFICATION`, `OPEN_RETENTION_CHECKIN`, `OPEN_EMPLOYER_CONFIRMATION`, `OPEN_CERTIFICATION_PIPELINE`, `OPEN_INDIA_HEATMAP`, `OPEN_SCHEME_ANALYTICS`, `OPEN_FUNDER_OUTCOMES`, `OPEN_STIPEND_QUEUE`, `OPEN_ASSESSMENT_QUEUE`, `OPEN_TRACK_DESIGNER`, `OPEN_ACCREDITATION_QUEUE`, `OPEN_COURSE_DISCOVERY`, `OPEN_CAREER_COUNSELLOR`, `OPEN_LEARNING_ASSISTANT`, `OPEN_MOCK_INTERVIEW`, `OPEN_JOBS_MARKETPLACE`, `OPEN_ATTENDANCE`, `OPEN_BATCH_DASHBOARD`, `OPEN_CENTRE_DASHBOARD`, `OPEN_WAR_ROOM`, `CREATE_REMINDER`, `CREATE_BROADCAST`, etc.
 - `moduleRegistry.js` — module ids with `allowedRoles`, aliases (multilingual), canvas view.
@@ -134,7 +134,7 @@ Direct fork of SwiftChat's pipeline. Pieces:
 
 ## 10. Notifications
 
-Type/category/priority/targetRoles model identical to SwiftChat. New KSK categories:
+Type/category/priority/targetRoles model. New KSK categories:
 `certification_deadline`, `assessor_visit`, `placement_verification`, `retention_due`, `stipend`, `scheme_announcement`, `centre_audit`, `accreditation_review`, `dropout_alert`, `anomaly_flag`, `general`.
 
 Persisted server-side (so cross-actor pings work) plus a localStorage mirror for offline read state.

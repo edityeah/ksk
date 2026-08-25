@@ -2,7 +2,7 @@
 // partners and mentors can share short updates: tips, milestones, questions,
 // job openings, job fairs, scheme announcements.
 //
-// Inspired by SwiftChat's posts surface. v1 scope: read + create + delete
+// Posts surface. v1 scope: read + create + delete
 // (own posts only) + open detail view on tap. Likes / comments deferred.
 //
 // Cards render differently by `kind`:

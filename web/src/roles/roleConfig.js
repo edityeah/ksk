@@ -1,4 +1,4 @@
-// KSK roles — mirrors the SwiftChat v3 pattern: labels, scopes, bots, suggestions,
+// KSK roles — labels, scopes, bots, suggestions, labels, scopes, bots, suggestions,
 // canvases, permissions. 10 roles total.
 
 export const ROLE_LABELS = {

@@ -917,7 +917,7 @@ export function getAllMous() {
 
 // ── Branch WhatsApp ping log (per-allocation simulated WhatsApp state) ───
 //
-// Mocks SwiftChat's WhatsApp-style one-tap employer confirmation: we
+// One-tap WhatsApp-style employer confirmation: we
 // simulate a ping going out to the branch contact, the response coming
 // back, and the resulting confirmed slot count.
 

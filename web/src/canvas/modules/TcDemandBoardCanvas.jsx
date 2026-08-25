@@ -765,7 +765,7 @@ const SECURED_STATUS = {
 function WhatsAppPingPanel({ mou, allocation, onCancel, onSend }) {
   // Compose a plain-text message preview that mimics what the branch contact
   // will see on WhatsApp. This is just the rendered preview; actual delivery
-  // would go through SwiftChat in a real impl.
+  // would go through the messaging layer in a real impl.
   const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   const topSkills = mou.skillDemandSheet.slice(0, 3).map(s => `• ${s.skill}`).join('\n')
   const message =
@@ -794,7 +794,7 @@ Reply YES to confirm all ${allocation.allocated} slots, or reply with the number
       <div className="bg-[#DCF8C6] rounded-xl rounded-tl-sm border border-[#25D366]/20 px-3 py-2 max-w-md">
         <div className="text-[11px] text-txt-primary whitespace-pre-line leading-snug">{message}</div>
         <div className="text-[9px] text-txt-tertiary mt-1 text-right">
-          to {allocation.branchContactName || 'branch contact'} · {allocation.branchContactPhone || 'no phone yet'} · ✓ via SwiftChat
+          to {allocation.branchContactName || 'branch contact'} · {allocation.branchContactPhone || 'no phone yet'} · ✓ via WhatsApp
         </div>
       </div>
 
@@ -808,7 +808,7 @@ Reply YES to confirm all ${allocation.allocated} slots, or reply with the number
         <button onClick={onSend}
           disabled={!allocation.branchContactPhone}
           className="text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded-pill bg-[#25D366] text-white font-bold hover:opacity-90 disabled:opacity-40">
-          <Send className="w-3 h-3" /> Send via SwiftChat
+          <Send className="w-3 h-3" /> Send via WhatsApp
         </button>
         <button onClick={onCancel} className="text-[11px] text-txt-secondary">Cancel</button>
       </div>

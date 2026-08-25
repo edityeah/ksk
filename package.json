@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "KSK — Kaushal Samiksha Kendra on SwiftChat (NSDC skilling M&E command centre)",
+  "description": "KSK — Kaushal Samiksha Kendra (NSDC skilling M&E command centre)",
   "scripts": {
     "build": "cd web && npm install --include=dev --no-audit --no-fund && npm run build",
     "start": "node start.cjs",

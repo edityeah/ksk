@@ -2,7 +2,7 @@
 
 ## What KSK is
 
-KSK (Kaushal Samiksha Kendra) is a national skilling Monitoring & Evaluation command centre running on SwiftChat. It is the intelligence and verification layer across India's skilling ecosystem under NSDC and the Ministry of Skill Development & Entrepreneurship (MSDE).
+KSK (Kaushal Samiksha Kendra) is a national skilling Monitoring & Evaluation command centre running on the KSK platform. It is the intelligence and verification layer across India's skilling ecosystem under NSDC and the Ministry of Skill Development & Entrepreneurship (MSDE).
 
 KSK functions as:
 - a national skilling intelligence layer,

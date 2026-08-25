@@ -2,7 +2,7 @@
 
 ## Schedule
 
-On day 30, day 60, and day 90 after the reported joining date, KSK sends an automated check-in to the trainee through SwiftChat:
+On day 30, day 60, and day 90 after the reported joining date, KSK sends an automated check-in to the trainee through KSK:
 
 - The trainee confirms continued employment with a single tap (Yes / Not anymore / Switched).
 - Optionally the trainee can upload a salary slip photo. KSK's OCR extracts employer name, gross salary, PF number and checks consistency with the declared placement.

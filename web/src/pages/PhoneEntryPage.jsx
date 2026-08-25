@@ -1,11 +1,10 @@
-// KSK Phone Entry — visually mirrors SwiftChat's PhoneEntryPage (mobile single-column +
+// KSK Phone Entry — mobile single-column + desktop split.
 // desktop split with illustration). Retargeted copy + KSK demo accounts list.
 
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api } from '../api/client.js'
 import Logo from '../components/Logo.jsx'
-import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
 import NsdcLogo from '../components/NsdcLogo.jsx'
 
 export default function PhoneEntryPage() {
@@ -44,7 +43,7 @@ export default function PhoneEntryPage() {
           <div>
             <h3 className="text-[18px] font-bold text-txt-primary mb-1">Stay Connected</h3>
             <p className="text-[13px] text-txt-secondary max-w-[260px] leading-relaxed mx-auto">
-              Trainees, trainers, employers, NSDC — everyone on KSK over SwiftChat.
+              Trainees, trainers, employers, NSDC — everyone on KSK.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -63,7 +62,7 @@ export default function PhoneEntryPage() {
             <button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary px-2 py-1 rounded-lg hover:bg-slate-100">
               ‹ Back
             </button>
-            <div className='flex items-center gap-3'><SwiftChatLogo size={26} /><div className='w-px h-6 bg-bdr' /><NsdcLogo size={22} showText={false} /></div>
+            <div className='flex items-center gap-3'><NsdcLogo size={22} showText={false} /></div>
           </div>
           <FormBody phone={phone} onChange={onChange} canProceed={canProceed} submit={submit} busy={busy} goBack={goBack} demoUsers={demoUsers} onPickDemo={setPhone} />
           <div className="flex justify-center pb-6 px-6 text-[100px]">📱</div>
@@ -75,7 +74,7 @@ export default function PhoneEntryPage() {
             <button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary px-2 py-1 rounded-lg hover:bg-slate-100">
               ‹ Back
             </button>
-            <div className='flex items-center gap-3'><SwiftChatLogo size={28} /><div className='w-px h-6 bg-bdr' /><NsdcLogo size={24} showText={false} /></div>
+            <div className='flex items-center gap-3'><NsdcLogo size={24} showText={false} /></div>
           </div>
           <FormBody phone={phone} onChange={onChange} canProceed={canProceed} submit={submit} busy={busy} goBack={goBack} demoUsers={demoUsers} onPickDemo={setPhone} />
         </div>

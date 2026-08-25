@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { api } from '../api/client.js'
 import Logo from '../components/Logo.jsx'
-import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
 import NsdcLogo from '../components/NsdcLogo.jsx'
 import { ChevronLeft } from 'lucide-react'
 
@@ -120,7 +119,7 @@ export default function AadhaarOtpPage() {
       <button onClick={goBack} className="inline-flex items-center gap-1 text-[13px] font-semibold text-txt-secondary hover:text-txt-primary px-2 py-1 rounded-lg hover:bg-slate-100">
         <ChevronLeft className="w-4 h-4" /> Back
       </button>
-      <div className='flex items-center gap-3'><SwiftChatLogo size={26} /><div className='w-px h-6 bg-bdr' /><NsdcLogo size={22} showText={false} /></div>
+      <div className='flex items-center gap-3'><NsdcLogo size={22} showText={false} /></div>
     </div>
   )
 
@@ -140,7 +139,7 @@ export default function AadhaarOtpPage() {
         {formBody}
       </div>
       <div className="hidden md:flex flex-col justify-center" style={{ width: 'clamp(340px, 38%, 460px)', flexShrink: 0, padding: '0 16px' }}>
-        <div className="px-6 mb-6 mt-6"><div className='flex items-center gap-3'><SwiftChatLogo size={28} /><div className='w-px h-6 bg-bdr' /><NsdcLogo size={24} showText={false} /></div></div>
+        <div className="px-6 mb-6 mt-6"><div className='flex items-center gap-3'><NsdcLogo size={24} showText={false} /></div></div>
         {formBody}
       </div>
     </div>

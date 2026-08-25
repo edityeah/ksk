@@ -1,8 +1,8 @@
 # KSK — Kaushal Samiksha Kendra
 
-National skilling Monitoring & Evaluation command centre on SwiftChat. Forked from the SwiftChat v3 (VSK Gujarat) prototype, retargeted to the NSDC / MSDE skilling ecosystem.
+National skilling Monitoring & Evaluation command centre for the NSDC / MSDE skilling ecosystem.
 
-**Core thesis:** maker-checker verification — no single actor controls a complete record. Trainee, employer, training partner each confirm independently inside SwiftChat. Solves the 22–27% placement-discordance problem observed in Cohorts 1–4 of the Skill Impact Bond.
+**Core thesis:** maker-checker verification — no single actor controls a complete record. Trainee, employer, training partner each confirm independently inside KSK. Solves the 22–27% placement-discordance problem observed in Cohorts 1–4 of the Skill Impact Bond.
 
 ---
 
@@ -10,7 +10,7 @@ National skilling Monitoring & Evaluation command centre on SwiftChat. Forked fr
 
 ```
 ksk/
-├── web/          # Vite + React 18 + Tailwind frontend (SwiftChat fork)
+├── web/          # Vite + React 18 + Tailwind frontend
 ├── server/       # Node + Express + Prisma + Postgres backend + OpenAI integration
 ├── docs/         # design docs, specs, knowledge base seeds for RAG
 └── render.yaml   # Render Blueprint — provisions everything in one click

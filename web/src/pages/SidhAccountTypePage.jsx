@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { ChevronLeft, Info } from 'lucide-react'
 import NsdcLogo from '../components/NsdcLogo.jsx'
-import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
 
 export default function SidhAccountTypePage() {
   const { navigate, goBack } = useApp()
@@ -40,7 +39,7 @@ export default function SidhAccountTypePage() {
             <div className="text-[10px] uppercase tracking-wider opacity-80">Ministry of Skill Development &amp; Entrepreneurship · NSDC</div>
             <div className="text-[14px] font-semibold">Skill India Digital Hub · SIDH</div>
           </div>
-          <div className="hidden md:block bg-white rounded-lg px-2 py-1"><SwiftChatLogo size={24} showText={false} /></div>
+          
         </div>
       </div>
 

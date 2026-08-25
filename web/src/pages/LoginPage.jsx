@@ -1,14 +1,12 @@
-// KSK Login — 3-slide auto-advancing carousel, mirror of SwiftChat's LoginPage.
+// KSK Login — 3-slide auto-advancing carousel.
 // Mobile: hero on top + rounded bottom-sheet form. Desktop: split (left illustration, right form).
 // CTAs retargeted: "Login with SIDH" + "Continue with Phone Number" + "Continue with Aadhaar"
 
 import { useCallback, useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import Logo from '../components/Logo.jsx'
-import SwiftChatLogo from '../components/SwiftChatLogo.jsx'
 import NsdcLogo from '../components/NsdcLogo.jsx'
 import PoweredBy from '../components/PoweredBy.jsx'
-import Mascot from '../components/Mascot.jsx'
 
 const SLIDES = [
   { id: 0, headline: 'Trusted by',  bold: '1.64 crore trainees across India', visual: 'students' },
@@ -129,7 +127,7 @@ function DesktopPanel({ slide, total }) {
 
       {/* Header logos */}
       <div className="p-8 flex items-center justify-between gap-4 relative z-10">
-        <SwiftChatLogo size={36} />
+        <Logo size={40} />
         <NsdcLogo size={30} />
       </div>
 
@@ -152,9 +150,9 @@ function DesktopPanel({ slide, total }) {
         </div>
       </div>
 
-      {/* Mascot — anchored at the bottom-centre of the left panel */}
-      <div className="flex justify-center pb-2 pt-4 z-10 relative">
-        <Mascot size={220} />
+      {/* KSK logo — anchored at the bottom-centre of the left panel */}
+      <div className="flex justify-center pb-6 pt-6 z-10 relative">
+        <Logo size={140} />
       </div>
     </div>
   )

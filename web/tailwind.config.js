@@ -8,7 +8,7 @@ export default {
         native: ['Noto Sans', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // SwiftChat tokens — verbatim from the reference repo, retargeted to KSK semantics
+        // KSK design tokens
         primary: {
           DEFAULT: '#386AF6',
           dark:    '#2755E3',

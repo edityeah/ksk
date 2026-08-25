@@ -1,4 +1,4 @@
-// KSK logo — SwiftChat shape (rounded squircle with chat-bubble glyph), retargeted.
+// KSK logo — rounded squircle with chat-bubble glyph.
 // Renders inline SVG so it scales crisply at any size.
 
 export default function Logo({ size = 64, showText = false, textColor = '#1A1F36' }) {

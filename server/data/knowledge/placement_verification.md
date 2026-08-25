@@ -4,11 +4,11 @@
 
 A placement in KSK is considered verified only when three independent signals agree:
 
-1. **Training Partner declares.** The TP (or Training Centre admin) enters trainee, employer, role, CTC, joining date, and optionally an appointment letter into SwiftChat. State on creation: `claimed_unverified`.
+1. **Training Partner declares.** The TP (or Training Centre admin) enters trainee, employer, role, CTC, joining date, and optionally an appointment letter into KSK. State on creation: `claimed_unverified`.
 
-2. **Trainee confirms.** SwiftChat sends the trainee a message asking them to independently confirm employment. The trainee responds Yes or No directly from their own SwiftChat session. The training partner cannot see this signal before the trainee submits it.
+2. **Trainee confirms.** KSK sends the trainee a message asking them to independently confirm employment. The trainee responds Yes or No directly from their own KSK session. The training partner cannot see this signal before the trainee submits it.
 
-3. **Employer confirms.** SwiftChat sends an independent confirmation request to the employer's registered contact (not through the training partner). The employer confirms or denies.
+3. **Employer confirms.** KSK sends an independent confirmation request to the employer's registered contact (not through the training partner). The employer confirms or denies.
 
 ## Verification states
 

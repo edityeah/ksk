@@ -382,15 +382,7 @@ const OFFLINE_HTML = `<!doctype html>
       <div class="next-heading">Meanwhile</div>
 
       <div class="step">
-        <div class="step-label">Email</div>
-        <div class="step-body">
-          <a href="mailto:aditya.c@convegenius.ai?subject=Wake%20up%20the%20KSK%20laptop&body=Hi%20Aditya%2C%20I%27d%20like%20to%20see%20the%20KSK%20demo%20%E2%80%94%20could%20you%20wake%20it%20up%3F">aditya.c@convegenius.ai</a>
-          <span class="step-note">Say &ldquo;wake up the KSK laptop&rdquo; or ask for a walkthrough &mdash; usually back within the hour.</span>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-label">Or wait</div>
+        <div class="step-label">Please wait</div>
         <div class="step-body">
           This page will retry every <span class="now">90 seconds</span>.
           <span class="step-note">You can also just refresh &mdash; nothing on this end is caching a stale copy.</span>

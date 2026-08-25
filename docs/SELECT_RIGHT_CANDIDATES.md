@@ -19,11 +19,11 @@ The mobilizer is the most important actor here, but the least visible in current
 | Actor | Who they are | Where they live | What they own |
 |---|---|---|---|
 | **Mobilizer** | Field person (often contracted by TP or TC) who goes to villages / colleges / job fairs to source candidates | Mobile-first, lives in the area | Outreach + intake form |
-| **Candidate / Applicant** | Person who has expressed interest, not yet enrolled | SwiftChat | Their application + responses |
+| **Candidate / Applicant** | Person who has expressed interest, not yet enrolled | KSK | Their application + responses |
 | **TC Counsellor** | Centre staff who screens and selects | TC login | Motivation review, assessment, decision |
 | **TC Centre Head** | Sunita Devi at Patna | TC login | Sign-off on selection |
 | **Trainer** | Sometimes runs the field immersion day | (no separate login for now) | — |
-| **Employer branch contact** | Hosts the field immersion at their workplace | WhatsApp / SwiftChat reply | Confirms candidates visited |
+| **Employer branch contact** | Hosts the field immersion at their workplace | WhatsApp / KSK reply | Confirms candidates visited |
 | **TP HQ** | Priya Kohli at Magic Bus | TP login | Selection policy, mobilizer registry, audit |
 
 ---
@@ -52,8 +52,8 @@ The mobilizer accepts the brief; this becomes their **active brief**.
 - Candidate gets an SMS / WhatsApp acknowledgement with their CandidateID
 - KSK records the mobilizer–candidate link permanently
 
-### Phase D · Role-specific Motivation Questions (Candidate via SwiftChat)
-- The candidate gets a SwiftChat ping with 4–6 questions specific to the role
+### Phase D · Role-specific Motivation Questions (Candidate via KSK)
+- The candidate gets a KSK ping with 4–6 questions specific to the role
 - Examples:
   - GDA: "What does a typical day in a hospital look like to you?" + "Are you OK with night shifts?" + "Do you mind seeing patients in pain?"
   - F&B Steward: "Are you comfortable serving food and clearing tables?" + "Can you work weekends?" + "Have you ever held a hospitality-style customer interaction?"
@@ -63,7 +63,7 @@ The mobilizer accepts the brief; this becomes their **active brief**.
 
 ### Phase E · Counselling Call (TC Counsellor)
 - TC counsellor sees the application + motivation answers in their inbox
-- Calls the candidate (phone or video on SwiftChat) — 5–10 minute conversation
+- Calls the candidate (phone or video on KSK) — 5–10 minute conversation
 - Logs: motivation rating (1–5), fit notes, red flags
 - Schedules the candidate for the next field immersion day (or rejects with a reason)
 
@@ -87,7 +87,7 @@ The mobilizer accepts the brief; this becomes their **active brief**.
 - TC counsellor compiles: motivation rating + immersion attendance + assessment score + demographic targets
 - Recommendation: Accept / Waitlist / Reject (with reason code from a fixed list: under-qualified, low motivation, geographic mismatch, family disapproval, alternate opportunity, conduct concern, immersion no-show, scheme demographic-target reasons)
 - Centre Head reviews and signs off
-- Candidate notified via SwiftChat — "Welcome, your batch starts on X" or "Not a fit; here's another role you might consider" or "Waitlisted, we'll let you know in 7 days"
+- Candidate notified via KSK — "Welcome, your batch starts on X" or "Not a fit; here's another role you might consider" or "Waitlisted, we'll let you know in 7 days"
 
 ### Phase I · Mobilizer Feedback Loop
 - The mobilizer immediately sees the outcome of every candidate they brought
